@@ -1,7 +1,9 @@
 # BAMCO Emission Test Engineering
 
 Eighteen collapsible sections are the single source for a complete test record.
-The register and eight analytics/report views read the same records.
+The site has two top-level tabs: one complete test worksheet and one interactive dashboard.
+The dashboard has separate sections for overview, pollutant comparison, distance to limits,
+phases/trends, ECU/fuel/energy, cycle quality and reports. All read the same records.
 No build is required. GitHub Pages serves the root of main.
 
 ## Device and central records
@@ -47,3 +49,17 @@ a publishable key. Triggers enforce immutable IDs, actors, timestamps and revisi
 Validated JavaScript syntax, record editing and connected dashboards, all
 analysis views, and a rolled-back database insert/update/audit test.
 Unauthorized writes were denied.
+
+## Interactive analysis
+
+Choose one or multiple tests and pollutants in dashboard selection settings. Filter by
+project, vehicle, calibration, cycle, validity, dates or test/VIN search. Compare raw
+or corrected phase/combined results, percent of each recorded limit, or percent change
+from a baseline. Measured-value plots separate incompatible units; mass units are
+converted explicitly. Missing results/limits are N/A. Combined-cycle limits are never
+applied to individual phases. Zero limits are assessed with absolute gaps only.
+
+Distance-to-limit charts show utilization against 100% and signed remaining headroom.
+Heatmap cells and chart points reveal exact values, units, sources, calibration and gaps.
+Illustrative demo targets are optional, clearly labelled and never written into records.
+Exports include the selected analysis CSV, complete selected test Excel and chart PNGs.
