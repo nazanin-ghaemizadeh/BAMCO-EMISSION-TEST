@@ -29,3 +29,7 @@ body{background:radial-gradient(ellipse at 92% -6%,#d9eee7 0%,transparent 37%),l
 .btn.compact{padding:7px 10px;font-size:11px}.dashboard-advanced{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.dashboard-advanced .analysis-card{min-width:0}.dashboard-advanced .span2{grid-column:span 2}.viz-title{font-size:17px;font-weight:700;color:#19363a;margin-bottom:13px}.dashboard-advanced .plot{height:300px}.dashboard-advanced .span2 .plot{height:330px}
 .matrix small{display:block;color:#91a0a4;font-size:9px;font-weight:400}.matrix td{font-variant-numeric:tabular-nums}.matrix th{background:#f5f8fa}
 @media(max-width:850px){.dashboard-advanced{grid-template-columns:1fr}.dashboard-advanced .span2{grid-column:span 1}.dashboard-advanced .plot{height:260px}}
+
+/* Simplified brand header */
+.app-header .brand,.app-header .header-tag{display:none!important}
+.app-header .header-identity{gap:22px}
