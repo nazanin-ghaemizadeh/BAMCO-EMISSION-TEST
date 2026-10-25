@@ -15,3 +15,25 @@ DEMO_RECORDS.forEach((r,i)=>{
   r.results[p]={p1,p2,combined};
  }
 });
+
+/* Related examples are paired repeats of the same synthetic vehicle. */
+DEMO_RECORDS.forEach((r,i)=>{
+ const group=Math.floor(i/2), repeat=i%2;
+ r.project='DEMO · Calibration evaluation';
+ r.model=group%2?'BAC X3':'BAC X3 Pro';
+ r.variant=group%2?'1.5T 6AT':'1.5T GDI CVT';
+ r.engine=group%2?'1.5T':'1.5T GDI';
+ r.transmission=group%2?'6AT':'CVT';
+ r.vin='DEMO-BAC-X3-'+String(100000+group);
+ r.engineNumber='DEMO-ENG-'+String(1001+group);
+ r.ratedPower=group%2?110:118;
+ r.ratedTorque=group%2?210:230;
+ r.ecuPart='DEMO-ECU-15T-'+(group%2?'01':'02');
+ r.mass=group%2?1420:1455;r.inertia=r.mass;
+ r.mileage=800+group*640+repeat*20;
+ r.powertrain='Gasoline';r.driveType='FWD';
+ r.parentTestId=repeat?'R83-2026-'+String(i).padStart(3,'0'):'';
+ r.ventilation='Controlled cooling fan and cell extraction (synthetic)';
+ r.phaseData={p1:{distance:5.5,duration:590,fuel:Number((r.fuelConsumption*1.24).toFixed(3))},p2:{distance:5.5,duration:590,fuel:Number((r.fuelConsumption*.76).toFixed(3))}};
+});
+

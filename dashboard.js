@@ -32,5 +32,3 @@ function bindDashboard(){if(tab!=='dashboard')return;const rerender=()=>show();$
 const originalShow=show;show=function(){originalShow();bindDashboard()};
 show();
 
-// Unified emission worksheet loader
-(function(){var s=document.createElement('script');s.src='unified-entry.js?v=2';document.head.appendChild(s);}());

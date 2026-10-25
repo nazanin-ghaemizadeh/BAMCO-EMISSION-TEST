@@ -102,3 +102,32 @@ body{background:radial-gradient(ellipse at 92% -6%,#d9eee7 0%,transparent 37%),l
 .entry-section>.form-grid,.entry-section>.table-wrap{margin:14px}
 .entry-section .form-grid{padding:0}
 .entry-section[open] summary{border-bottom:1px solid #e1eee6}
+
+/* Complete registry, responsive forms and central data connection. */
+.section-body{padding:16px}.section-body>.form-grid{padding:0;margin:12px 0}
+.section-tools,.view-controls,.report-actions,.compare-picks,.attachment-add{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:14px 0}
+.section-tools{border-top:1px solid var(--line);padding-top:14px}
+.reuse-label,.actor-label{display:block;max-width:500px;color:#57736d;font-size:12px}.actor-label{margin:12px 0}.actor-label input{margin-top:5px}
+.field[hidden]{display:none!important}
+.entry-section .table-wrap select{min-width:90px;border:1px solid #dce4eb;border-radius:6px;padding:8px;background:#fff}
+.entry-section .table-wrap input{min-width:100px;max-width:160px}
+#saveStatus{display:block;color:#206c56;font-weight:650;font-size:12px}
+.view-controls label{min-width:145px;color:#57736d;font-size:12px}
+.compare-picks label{padding:10px;background:#f2f8f5;border:1px solid #dce9e5;border-radius:8px}
+.compare-picks input{accent-color:#206c56}
+.upload-panel details{margin:12px 0}.upload-panel summary{cursor:pointer;font-weight:650;color:#206c56;line-height:1.5}
+.upload-panel .control-label{margin-top:10px}
+#dataSettings{grid-column:1/-1;width:100%}
+#dataSettings>summary{padding:12px;background:#eff7f2;border-radius:8px}
+.report-actions .btn{min-height:44px}
+.attachment-add>label{flex:1;min-width:190px;color:#57736d}
+dialog{border:1px solid #dce9e5;border-radius:15px;max-width:1100px;width:92vw;max-height:85vh;padding:22px;color:#19363a}
+dialog::backdrop{background:#102b3acc}.dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;background:#fff}
+dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}dialog details{padding:12px;border-bottom:1px solid #dce9e5}
+#notice{position:sticky;bottom:12px;background:#e5f4ec;border-radius:9px;padding:8px;z-index:25;white-space:pre-wrap}
+#notice:empty{display:none}.entry-section summary small{flex-shrink:0}
+.entry-section summary span{overflow-wrap:anywhere}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #5eac96;outline-offset:2px}
+@media(max-width:850px){.upload-panel #cloudAuth,.upload-panel #cloudStatus,.upload-panel #dataMode{grid-column:1/-1}.upload-panel #cloudAuth{margin:4px 0}.section-body{padding:12px}.entry-section summary small{font-size:10px}.view-controls{width:100%}.view-controls label{flex:1;min-width:100px}.section-tools .btn{min-height:44px}.section-tools{display:grid;grid-template-columns:1fr 1fr}.section-tools .btn{padding:9px 5px}.chart-panel>.analysis-card{min-width:0}.entry-section .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.entry-section input,.entry-section select{font-size:16px!important}dialog{padding:12px}}
+@media(max-width:420px){.entry-section .form-grid{grid-template-columns:1fr}.entry-section summary{align-items:start}.entry-section summary span{font-size:13px}.app-header .header-identity{gap:12px}.section-tools .btn{font-size:11px}.report-actions .btn{width:100%}}
+
