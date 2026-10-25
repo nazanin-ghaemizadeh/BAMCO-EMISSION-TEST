@@ -19,3 +19,13 @@ body{background:radial-gradient(ellipse at 92% -6%,#d9eee7 0%,transparent 37%),l
 .chart-heading h2{font-size:27px;font-weight:650;letter-spacing:-.8px}
 .sheet-topbar{background:linear-gradient(110deg,#eef7f2,#f9fcfa);border:1px solid #cfe6d8;border-radius:16px}
 @media(max-width:650px){.header-identity{align-items:flex-start;flex-direction:column;gap:12px}.company-logo{width:150px;flex-basis:auto;height:54px}.company-logo img{max-height:54px}.app-header h1{font-size:27px}}
+
+/* Compact, chart-first analytics workspace */
+.dashboard-controls{padding:16px 18px;background:linear-gradient(110deg,#eef7f2,#f9fcfa);border:1px solid #cfe6d8;border-radius:15px;margin:20px 0 14px}
+.dashboard-control-row{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}.dashboard-control-row h3{font-size:19px;margin:0;color:#1c5248}
+.dash-selectors{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.dash-selectors label{font-size:11px;font-weight:700;color:#57736d}.dash-selectors select{min-width:135px}
+.pollutant-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:15px;padding-top:13px;border-top:1px solid #d8e8df}.pollutant-label{font-size:10px;letter-spacing:1px;color:#647b7d;font-weight:700;margin-right:8px}
+.pollutant-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;background:#fff;border:1px solid #dce9e5;border-radius:9px;cursor:pointer;font-size:12px;color:#45635d;font-weight:700}.pollutant-chip.checked{background:#e5f4ec;border-color:#a7d4bd}.pollutant-chip input{accent-color:#206c56;margin:0}.pollutant-dot{width:8px;height:8px;border-radius:50%}
+.btn.compact{padding:7px 10px;font-size:11px}.dashboard-advanced{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.dashboard-advanced .analysis-card{min-width:0}.dashboard-advanced .span2{grid-column:span 2}.viz-title{font-size:17px;font-weight:700;color:#19363a;margin-bottom:13px}.dashboard-advanced .plot{height:300px}.dashboard-advanced .span2 .plot{height:330px}
+.matrix small{display:block;color:#91a0a4;font-size:9px;font-weight:400}.matrix td{font-variant-numeric:tabular-nums}.matrix th{background:#f5f8fa}
+@media(max-width:850px){.dashboard-advanced{grid-template-columns:1fr}.dashboard-advanced .span2{grid-column:span 1}.dashboard-advanced .plot{height:260px}}
