@@ -1,0 +1,20 @@
+(function(){'use strict';
+const KEY='bamco-emission-sheets-v1',OLD='bamco-emission-engineering-v3';
+const schema=window.EMISSION_SCHEMA,groups=schema.groups,ps=schema.pollutants;
+function data(){let raw=localStorage.getItem(KEY)||localStorage.getItem(OLD);let x=raw?JSON.parse(raw):DEMO_RECORDS;if(!Array.isArray(x))x=x.records;if(!Array.isArray(x))throw Error('Invalid test records');return x}
+function cell(v){if(v==null)return '';if(typeof v==='object')return JSON.stringify(v);return v}
+function safe(s){return String(s||'Test').replace(/[\\/*?:\[\]]/g,'-').slice(0,31)||'Test'}
+function addSheet(wb,name,lines){let ws=XLSX.utils.aoa_to_sheet(lines);ws['!cols']=[{wch:31},{wch:45},{wch:22},{wch:22},{wch:22}];ws['!autofilter']={ref:'A1:E1'};XLSX.utils.book_append_sheet(wb,ws,name)}
+function testRows(r){let a=[['BAMCO · EMISSION TEST RECORD',r.id||''],['SECTION','FIELD','VALUE','UNIT','REFERENCE']];for(const [section,fields] of groups){a.push([section.toUpperCase()]);for(const [key,label] of fields)a.push(['',label,cell(r[key])]);if(section==='Raw emission results'){a.push(['','Pollutant','Phase 1','Phase 2','Combined']);for(const p of ps)a.push(['',p,cell(r.results?.[p]?.p1),cell(r.results?.[p]?.p2),cell(r.results?.[p]?.combined)]);a.push(['','Units',...['p1','p2','combined'].map(()=>'' )]);for(const p of ps)a.push(['',p+' unit',r.resultUnits?.[p]||schema.units[p]||''])}
+if(section==='Driving cycle'){for(const [phase,record] of Object.entries(r.phaseData||{})){a.push(['',phase+' details',cell(record)])}}
+if(section==='Calculations and limits'){for(const p of ps)a.push(['',p+' limit',cell(r.limits?.[p]??r['limit'+p]),r.limitsUnits?.[p]||schema.units[p]||''])}}
+a.push(['ATTACHMENTS']);for(const f of r.attachments||[])a.push(['',f.name||'',f.kind||'',f.at||'']);a.push(['CHANGE HISTORY']);for(const h of r.history||[])a.push(['',h.key||'',cell(h.before??h.oldValue),cell(h.after??h.newValue),h.at||'']);return a}
+function filename(s){return String(s).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,70)}
+function ensure(){if(!window.XLSX)throw Error('Excel export library could not load. Check your connection and reload the page.')}
+function exportAll(){ensure();const records=data(),wb=XLSX.utils.book_new(),used=new Set();if(!records.length)throw Error('No tests to export');for(const r of records){let base=safe(r.id),name=base,n=2;while(used.has(name.toLowerCase())){const suffix='-'+n++;name=base.slice(0,31-suffix.length)+suffix}used.add(name.toLowerCase());addSheet(wb,name,testRows(r))}XLSX.writeFile(wb,'BAMCO_Emission_All_Tests.xlsx',{compression:true})}
+function exportOne(id){ensure();const r=data().find(x=>x.id===id);if(!r)throw Error('Test not found');let wb=XLSX.utils.book_new();addSheet(wb,safe(r.id),testRows(r));XLSX.writeFile(wb,'BAMCO_Emission_'+filename(r.id)+'.xlsx',{compression:true})}
+function exportActions(){ensure();let records=data(),wb=XLSX.utils.book_new();let cols=[['id','Test ID'],['date','Test Date'],['model','Vehicle'],['project','Project'],['nonconformities','Nonconformities'],['rootCause','Root Cause'],['correctiveAction','Corrective Action'],['actionOwner','Action Owner'],['actionStatus','Action Status'],['actionDue','Due Date'],['changeId','Change Ref'],['changeType','Change Type'],['before','Before'],['after','After']];let ws=XLSX.utils.aoa_to_sheet([cols.map(x=>x[1]),...records.map(r=>cols.map(([k])=>cell(r[k])))]);ws['!cols']=cols.map(([k,l])=>({wch:Math.max(15,Math.min(40,l.length+8))}));ws['!autofilter']={ref:'A1:N'+(records.length+1)};XLSX.utils.book_append_sheet(wb,ws,'Actions');XLSX.writeFile(wb,'BAMCO_Emission_Actions.xlsx',{compression:true})}
+function run(fn){try{fn()}catch(e){let el=document.getElementById('pageNotice');if(el)el.textContent='Excel export: '+e.message;else alert(e.message)}}
+window.BAMCOExcel={exportAll:()=>run(exportAll),exportOne:id=>run(()=>exportOne(id)),exportActions:()=>run(exportActions)};
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('exportAllExcel')?.addEventListener('click',window.BAMCOExcel.exportAll);document.getElementById('exportActionsExcel')?.addEventListener('click',window.BAMCOExcel.exportActions)});
+}());
