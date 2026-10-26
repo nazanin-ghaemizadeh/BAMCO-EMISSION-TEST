@@ -37,7 +37,7 @@
  }
  function statusHTML(r){const s=result(r);return s==='Pass'||s==='Fail'?'<span class="status-face '+s.toLowerCase()+'" role="img" aria-label="'+(s==='Pass'?'Pass · green smiling face':'Fail · red crying face')+'" title="'+esc(s)+'">'+FACES[s]+'<span>'+s+'</span></span>':'<span class="pending-status">Not assessed</span>'}
  function render(){
-  $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td>'+esc(display(r.project))+'</td><td><span class="repeat-number">'+esc(display(r.testRun))+'</span><span class="original-id">'+esc(r.parentTestId||'Original test')+'</span></td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'" aria-label="Open '+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'" aria-label="Edit '+esc(r.id)+'">Edit</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'" aria-label="Delete '+esc(r.id)+'">Delete</button></div></td></tr>').join(''):'<tr><td colspan="7" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>';
+  $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td>'+esc(display(r.project))+'</td><td><span class="repeat-number">'+esc(display(r.testRun))+'</span><span class="original-id">'+esc(r.parentTestId||'Original test')+'</span></td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'" aria-label="Open '+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'" aria-label="Edit '+esc(r.id)+'">Edit</button><button class="row-action" data-action="excel" data-id="'+esc(r.id)+'" aria-label="Export Excel">Excel</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'" aria-label="Delete '+esc(r.id)+'">Delete</button></div></td></tr>').join(''):'<tr><td colspan="7" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>';
   $('createTest').disabled=Boolean(storageError);if(storageError)$('pageNotice').textContent=storageError;
  }
  function today(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('-')}
@@ -128,7 +128,7 @@
   }catch(e){notice('Could not delete: '+e.message,true)}
  }
  $('createTest').onclick=()=>open('create',null,$('createTest'));
- $('testRows').onclick=event=>{const action=event.target.closest('[data-action]');if(action)open(action.dataset.action,action.dataset.id,action)};
+ $('testRows').onclick=event=>{const action=event.target.closest('[data-action]');if(action){if(action.dataset.action==='excel'){window.BAMCOExcel?.exportOne(action.dataset.id);return}open(action.dataset.action,action.dataset.id,action)}};
  $('closeDialog').onclick=close;$('cancelDialog').onclick=close;
  $('testDialog').addEventListener('cancel',event=>{event.preventDefault();close()});
  $('keepEditing').onclick=()=>$('discardDialog').close();$('discardChanges').onclick=finishClose;
