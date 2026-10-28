@@ -129,3 +129,6 @@
  window.emissionAnalysisMath={convert,measurement,gap,baselineDelta,state:S};
  if(typeof show==='function')show();
 }());
+
+/* R83 management dashboard access */
+(function(){function attach(){if(document.getElementById('r83-management-link'))return;const a=document.createElement('a');a.id='r83-management-link';a.href='r83-management.html';a.textContent='📊 R83 Management Dashboard';a.style.cssText='display:inline-flex;align-items:center;justify-content:center;background:#146b54;color:white;text-decoration:none;padding:12px 16px;border-radius:10px;font-weight:700;margin:8px 0;min-height:44px';(document.querySelector('.chart-heading')||document.querySelector('.app-header')||document.body).appendChild(a)}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach);else attach()})();
