@@ -1,6 +1,6 @@
 (function(){
  'use strict';
- const KEY='bamco-emission-sheets-v1',OLD_KEY='bamco-emission-engineering-v3',ARCHIVE='bamco-emission-deleted-tests-v1';
+ const KEY='bamco-emission-exact-r83-v2',OLD_KEY='bamco-emission-exact-r83-v2',ARCHIVE='bamco-emission-deleted-tests-v1';
  const {groups:GROUPS,pollutants:P,units:UNIT}=window.EMISSION_SCHEMA;
  const $=id=>document.getElementById(id),clone=value=>structuredClone(value);
  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -11,12 +11,12 @@
   Fail:'<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#ffe7e7" stroke="#c34648" stroke-width="2"/><path d="M11 15 L16 16 M24 16 L29 15" fill="none" stroke="#c34648" stroke-width="2" stroke-linecap="round"/><circle cx="14" cy="18.5" r="1.5" fill="#c34648"/><circle cx="26" cy="18.5" r="1.5" fill="#c34648"/><path d="M13 29 Q20 21 27 29" fill="none" stroke="#c34648" stroke-width="2" stroke-linecap="round"/><path d="M29 20 Q25 26 29 27.5 Q33 26 29 20" fill="#d2575b"/></svg>'
  };
  let rows=[],draft=null,original=null,cleanDraft=null,mode='open',pendingFiles=[],inputIndex=0,storageError='',saving=false,lastTrigger=null;
- function normalize(r){r.results??={};r.attachments??=[];r.history??=[];r.phaseData??={};r.limits??={};r.resultUnits??={};r.limitsUnits??={};return r}
+ function normalize(r){r.cells??={};r.id=r.cells.C5||r.id;r.date=r.cells.C6||r.date;r.model=r.cells.C15||r.model;r.results??={};r.attachments??=[];r.history??=[];r.phaseData??={};r.limits??={};r.resultUnits??={};r.limitsUnits??={};return r}
  function getSaved(){
   try{const raw=localStorage.getItem(KEY),legacy=raw?null:localStorage.getItem(OLD_KEY);let parsed=raw?JSON.parse(raw):legacy?JSON.parse(legacy):null;
    if(parsed&&!Array.isArray(parsed)&&Array.isArray(parsed.records))parsed=parsed.records;
    if(parsed!==null&&(!Array.isArray(parsed)||parsed.some(r=>!r||typeof r.id!=='string'||!r.id)))throw Error('The saved test register is not valid.');
-   const data=parsed??DEMO_RECORDS.map(clone);if(new Set(data.map(r=>r.id)).size!==data.length)throw Error('Duplicate test IDs were found in the saved register.');
+   const data=parsed??[];if(new Set(data.map(r=>r.id)).size!==data.length)throw Error('Duplicate test IDs were found in the saved register.');
    return data.map(normalize);
   }catch(e){storageError='Saved tests could not be read. The original data has been kept unchanged. '+e.message;return null}
  }
@@ -37,20 +37,20 @@
  }
  function statusHTML(r){const s=result(r);return s==='Pass'||s==='Fail'?'<span class="status-face '+s.toLowerCase()+'" role="img" aria-label="'+(s==='Pass'?'Pass · green smiling face':'Fail · red crying face')+'" title="'+esc(s)+'">'+FACES[s]+'<span>'+s+'</span></span>':'<span class="pending-status">Not assessed</span>'}
  function render(){
-  $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td>'+esc(display(r.project))+'</td><td><span class="repeat-number">'+esc(display(r.testRun))+'</span><span class="original-id">'+esc(r.parentTestId||'Original test')+'</span></td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'" aria-label="Open '+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'" aria-label="Edit '+esc(r.id)+'">Edit</button><button class="row-action" data-action="excel" data-id="'+esc(r.id)+'" aria-label="Export Excel">Excel</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'" aria-label="Delete '+esc(r.id)+'">Delete</button></div></td></tr>').join(''):'<tr><td colspan="7" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>';
+  $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'">Edit</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'">Delete</button></div></td></tr>').join(''):'<tr><td colspan="5" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>';
   $('createTest').disabled=Boolean(storageError);if(storageError)$('pageNotice').textContent=storageError;
  }
  function today(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('-')}
  function uuid(){if(window.crypto?.randomUUID)return window.crypto.randomUUID();const bytes=window.crypto?.getRandomValues?window.crypto.getRandomValues(new Uint8Array(16)):Array.from({length:16},()=>Math.floor(Math.random()*256));return [...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
  function createId(){let id;do{id='EM-'+today().slice(0,4)+'-'+uuid().slice(0,8).toUpperCase()}while(rows.some(r=>r.id===id));return id}
- function newTest(){return normalize({id:createId(),date:today(),testRun:1,testStatus:'Draft',cyclePhaseCount:2,correctionFactor:1,finalResult:'Not assessed'})}
+ function newTest(){const id=createId();return normalize({id,date:today(),model:'',testStatus:'Draft',cells:{C5:id,C6:today()}})}
  function field(label,path,type='text',options='',section=-1,valueOverride){
   const value=valueOverride!==undefined?valueOverride:getPath(draft,path),editable=mode==='edit'||mode==='create',id='record-field-'+(++inputIndex);
   let cell;
   if(!editable||type==='computed')cell='<span class="field-value" '+(type==='computed'?'data-calculated="'+esc(path)+'"':'')+'>'+esc(display(value))+'</span>';
   else{
-   const readOnly=path==='id'&&mode!=='create';
-   const attrs=' id="'+id+'" data-key="'+esc(path)+'" data-section="'+section+'" '+(readOnly?'readonly ':'')+(path==='id'?'required maxlength="128" ':'')+(path==='cyclePhaseCount'?'min="1" max="8" ':'');
+   const readOnly=path==='cells.C5'&&mode!=='create';
+   const attrs=' id="'+id+'" data-key="'+esc(path)+'" data-section="'+section+'" '+(readOnly?'readonly ':'')+(path==='cells.C5'?'required maxlength="128" ':'')+(path==='cyclePhaseCount'?'min="1" max="8" ':'');
    if(type==='select'){
     const opts=options.split('|').filter(Boolean);if(value!=null&&value!==''&&!opts.includes(String(value)))opts.unshift(String(value));
     cell='<select'+attrs+'><option value="">Select…</option>'+opts.map(v=>'<option value="'+esc(v)+'" '+(v===String(value)?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select>';
@@ -63,9 +63,9 @@
  function subheading(label){return '<tr class="subsection-row"><th colspan="2">'+esc(label)+'</th></tr>'}
  function extraRows(section){
   let html='';
-  if(section===10){for(const p of P){html+=subheading(p);html+=field(p+' · measurement unit','resultUnits.'+p,'select',[...new Set([draft.resultUnits[p]||UNIT[p],UNIT[p],'g/km','mg/km','#/km','ppm','%','g/test','mg/test'])].join('|'),section,draft.resultUnits[p]||UNIT[p]);for(const phase of [...phaseKeys(draft),'combined'])html+=field(p+' · '+phaseLabel(draft,phase),'results.'+p+'.'+phase,'number','',section);}}
-  if(section===11){for(const phase of phaseKeys(draft)){html+=subheading(phaseLabel(draft,phase));for(const [key,label] of [['distance','Distance (km)'],['duration','Duration (s)'],['fuel','Fuel consumption (L/100 km)'],['energy','Energy consumption (kWh/100 km)']])html+=field(label,'phaseData.'+phase+'.'+key,'number','',section);}}
-  if(section===14){for(const p of P){html+=subheading(p);html+=field(p+' · raw combined ('+(draft.resultUnits[p]||UNIT[p])+')','raw.'+p,'computed','',section,draft.results[p]?.combined);html+=field(p+' · corrected ('+(draft.resultUnits[p]||UNIT[p])+')','corrected.'+p,'computed','',section,corrected(draft,p));html+=field(p+' · limit','limits.'+p,'number','',section,draft.limits[p]??draft['limit'+p]??'');html+=field(p+' · limit unit','limitsUnits.'+p,'select',[...new Set([draft.limitsUnits[p]||UNIT[p],UNIT[p],'g/km','mg/km','#/km','ppm','%','g/test','mg/test'])].join('|'),section,draft.limitsUnits[p]||UNIT[p]);}}
+  if(false&&section===10){for(const p of P){html+=subheading(p);html+=field(p+' · measurement unit','resultUnits.'+p,'select',[...new Set([draft.resultUnits[p]||UNIT[p],UNIT[p],'g/km','mg/km','#/km','ppm','%','g/test','mg/test'])].join('|'),section,draft.resultUnits[p]||UNIT[p]);for(const phase of [...phaseKeys(draft),'combined'])html+=field(p+' · '+phaseLabel(draft,phase),'results.'+p+'.'+phase,'number','',section);}}
+  if(false&&section===11){for(const phase of phaseKeys(draft)){html+=subheading(phaseLabel(draft,phase));for(const [key,label] of [['distance','Distance (km)'],['duration','Duration (s)'],['fuel','Fuel consumption (L/100 km)'],['energy','Energy consumption (kWh/100 km)']])html+=field(label,'phaseData.'+phase+'.'+key,'number','',section);}}
+  if(false&&section===14){for(const p of P){html+=subheading(p);html+=field(p+' · raw combined ('+(draft.resultUnits[p]||UNIT[p])+')','raw.'+p,'computed','',section,draft.results[p]?.combined);html+=field(p+' · corrected ('+(draft.resultUnits[p]||UNIT[p])+')','corrected.'+p,'computed','',section,corrected(draft,p));html+=field(p+' · limit','limits.'+p,'number','',section,draft.limits[p]??draft['limit'+p]??'');html+=field(p+' · limit unit','limitsUnits.'+p,'select',[...new Set([draft.limitsUnits[p]||UNIT[p],UNIT[p],'g/km','mg/km','#/km','ppm','%','g/test','mg/test'])].join('|'),section,draft.limitsUnits[p]||UNIT[p]);}}
   if(section===16){
    const files=[...draft.attachments,...pendingFiles.map(x=>({id:x.id,name:x.file.name,size:x.file.size,kind:'Attachment',pending:true}))];
    html+='<tr><th scope="row">Attached files</th><td><div class="attachment-list">'+(files.length?files.map(a=>'<div class="attachment-file"><span>'+esc(a.name)+'<small>'+esc(a.kind||'Attachment')+' · '+esc(display(Math.round(a.size/1024)))+' KB'+(a.pending?' · pending save':'')+'</small></span>'+(!a.pending?'<button type="button" class="row-action" data-download="'+esc(a.id)+'">Download</button>':'')+'</div>').join(''):'—')+'</div></td></tr>';
@@ -84,7 +84,7 @@
  }
  function open(modeName,id,trigger){const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
- function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne)}
+ function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=draft.cells.C6||'';draft.model=draft.cells.C15||''}}
  function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
  function dirty(){if(!draft||!['edit','create'].includes(mode))return false;collect();return pendingFiles.length>0||stable(draft)!==stable(cleanDraft)}
  function close(){if(saving)return;if(dirty()){$('discardDialog').showModal();return}finishClose()}
@@ -102,9 +102,9 @@
   catch(e){notice(e.message,true)}
  }
  async function save(event){
-  event.preventDefault();if(saving||!draft)return;collect();const id=String(draft.id||'').trim();if(!id||id.length>128||id.includes('/'))return notice('Enter a unique test ID of up to 128 characters, without a slash.',true);
-  if(draft.cyclePhaseCount!==''&&(!Number.isInteger(Number(draft.cyclePhaseCount))||Number(draft.cyclePhaseCount)<1||Number(draft.cyclePhaseCount)>8))return notice('Number of phases must be an integer from 1 to 8.',true);
-  draft.id=id;let latest=getSaved();if(!latest)return notice(storageError,true);
+  event.preventDefault();if(saving||!draft)return;collect();const id=String(draft.cells?.C5||draft.id||'').trim();if(!id||id.length>128||id.includes('/'))return notice('Enter a unique test ID of up to 128 characters, without a slash.',true);
+  
+  draft.id=id;draft.cells??={};draft.cells.C5=id;draft.date=draft.cells.C6||'';draft.model=draft.cells.C15||'';let latest=getSaved();if(!latest)return notice(storageError,true);
   const saved=latest.find(r=>r.id===id);
   if(mode==='create'&&saved)return notice('This test ID already exists. Choose a different ID.',true);
   if(mode==='edit'&&(!saved||stable(saved)!==stable(original)))return notice('This test changed in another window. Your edits are kept here; reopen the latest record before saving.',true);
