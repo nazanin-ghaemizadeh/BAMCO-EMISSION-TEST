@@ -10,9 +10,11 @@
   Pass:'<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#e5f4ec" stroke="#18804e" stroke-width="2"/><circle cx="14" cy="16" r="1.8" fill="#18804e"/><circle cx="26" cy="16" r="1.8" fill="#18804e"/><path d="M11.5 23 Q20 34 28.5 23" fill="none" stroke="#18804e" stroke-width="2.3" stroke-linecap="round"/></svg>',
   Fail:'<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#ffe7e7" stroke="#c34648" stroke-width="2"/><path d="M11 15 L16 16 M24 16 L29 15" fill="none" stroke="#c34648" stroke-width="2" stroke-linecap="round"/><circle cx="14" cy="18.5" r="1.5" fill="#c34648"/><circle cx="26" cy="18.5" r="1.5" fill="#c34648"/><path d="M13 29 Q20 21 27 29" fill="none" stroke="#c34648" stroke-width="2" stroke-linecap="round"/><path d="M29 20 Q25 26 29 27.5 Q33 26 29 20" fill="#d2575b"/></svg>'
  };
+ const central=window.BamcoCentral;let connected=false,revisions={};
  let rows=[],draft=null,original=null,cleanDraft=null,mode='open',pendingFiles=[],inputIndex=0,storageError='',saving=false,lastTrigger=null;
  function normalize(r){r.cells??={};r.id=r.cells.C5||r.id;r.date=r.cells.C6||r.date;r.model=r.cells.C15||r.model;r.results??={};r.attachments??=[];r.history??=[];r.phaseData??={};r.limits??={};r.resultUnits??={};r.limitsUnits??={};return r}
- function getSaved(){
+ function getSaved(){if(connected)return rows.map(clone);
+
   try{const raw=localStorage.getItem(KEY),legacy=raw?null:localStorage.getItem(OLD_KEY);let parsed=raw?JSON.parse(raw):legacy?JSON.parse(legacy):null;
    if(parsed&&!Array.isArray(parsed)&&Array.isArray(parsed.records))parsed=parsed.records;
    if(parsed!==null&&(!Array.isArray(parsed)||parsed.some(r=>!r||typeof r.id!=='string'||!r.id)))throw Error('The saved test register is not valid.');
@@ -20,7 +22,10 @@
    return data.map(normalize);
   }catch(e){storageError='Saved tests could not be read. The original data has been kept unchanged. '+e.message;return null}
  }
- function persist(data){if(storageError)throw Error(storageError);localStorage.setItem(KEY,JSON.stringify(data))}
+ function persist(data){/* Legacy device data remains untouched; confirmed records live in the database. */}
+ async function refreshCentral(){const records=await central.all('emission_tests');revisions=Object.fromEntries(records.map(r=>[r.id,r.revision]));rows=records.map(r=>normalize(r.data));connected=true;storageError='';render();$('pageNotice').textContent='Central database connected · '+rows.length+' tests';}
+ async function saveCentral(record,isNew){if(!connected||!central.ready())throw Error('Central connection is unavailable. Reopen from Task Management.');const payload={data:record,updated_by:central.user().id};if(isNew){payload.id=record.id;payload.created_by=central.user().id;}const path='emission_tests'+(isNew?'':'?id=eq.'+encodeURIComponent(record.id)+'&revision=eq.'+revisions[record.id]);const result=await central.request(path,{method:isNew?'POST':'PATCH',body:payload,prefer:'return=representation'});if(!result?.length)throw Error('This test changed on another device or access was removed. Reopen the latest record.');revisions[record.id]=result[0].revision;}
+
  function stable(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return '['+value.map(stable).join(',')+']';return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}'}
  function getPath(object,path){return path.split('.').reduce((v,k)=>v?.[k],object)}
  function setPath(object,path,value){const parts=path.split('.'),last=parts.pop();let target=object;for(const key of parts){if(!target[key]||typeof target[key]!=='object')target[key]={};target=target[key]}target[last]=value}
@@ -38,7 +43,7 @@
  function statusHTML(r){const s=result(r);return s==='Pass'||s==='Fail'?'<span class="status-face '+s.toLowerCase()+'" role="img" aria-label="'+(s==='Pass'?'Pass · green smiling face':'Fail · red crying face')+'" title="'+esc(s)+'">'+FACES[s]+'<span>'+s+'</span></span>':'<span class="pending-status">Not assessed</span>'}
  function render(){
   $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'">Edit</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'">Delete</button></div></td></tr>').join(''):'<tr><td colspan="5" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>';
-  $('createTest').disabled=Boolean(storageError);if(storageError)$('pageNotice').textContent=storageError;
+  $('createTest').disabled=!connected||Boolean(storageError);if(storageError)$('pageNotice').textContent=storageError;
  }
  function today(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('-')}
  function uuid(){if(window.crypto?.randomUUID)return window.crypto.randomUUID();const bytes=window.crypto?.getRandomValues?window.crypto.getRandomValues(new Uint8Array(16)):Array.from({length:16},()=>Math.floor(Math.random()*256));return [...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -82,7 +87,7 @@
   $('dialogNotice').className='';
   $('dialogNotice').textContent=mode==='delete'?'Delete this test and remove it from the register?':mode==='create'?'Enter the test details in order, then select Save Test.':mode==='edit'?'Changes are applied when you select Save Test.':'';
  }
- function open(modeName,id,trigger){const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
+ function open(modeName,id,trigger){if(!connected)return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
  function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=draft.cells.C6||'';draft.model=draft.cells.C15||''}}
  function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
@@ -98,7 +103,7 @@
  async function putFile(id,file){const db=await openFiles();return new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Attachment storage was interrupted.'))})}
  async function getFile(id){const db=await openFiles();return new Promise((resolve,reject)=>{const request=db.transaction('files','readonly').objectStore('files').get(id);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
  async function downloadFile(id){
-  try{const a=draft.attachments.find(x=>x.id===id);if(!a)throw Error('Attachment not found.');if(a.path)throw Error('This attachment belongs to a central record. Its existing file has been preserved.');const file=await getFile(id);if(!file)throw Error('The original file is not stored on this device.');const url=URL.createObjectURL(file),link=document.createElement('a');link.href=url;link.download=a.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+  try{const a=draft.attachments.find(x=>x.id===id);if(!a)throw Error('Attachment not found.');const file=a.path?await central.request('object/authenticated/emission-attachments/'+a.path,{storage:true,blob:true}):await getFile(id);if(!file)throw Error('The original file is not stored on this device.');const url=URL.createObjectURL(file),link=document.createElement('a');link.href=url;link.download=a.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
   catch(e){notice(e.message,true)}
  }
  async function save(event){
@@ -111,19 +116,19 @@
   saving=true;$('saveRecord').disabled=true;
   try{
    const uploaded=[];for(const pending of pendingFiles){await putFile(pending.id,pending.file);uploaded.push({id:pending.id,testId:id,name:pending.file.name,size:pending.file.size,type:pending.file.type,kind:'Attachment',at:new Date().toISOString()})}draft.attachments.push(...uploaded);pendingFiles=[];
-   const at=new Date().toISOString();draft.history=[...(original?.history||[]),...changes(original,draft).map(x=>({...x,at,actor:'Local device (unverified)',section:GROUPS.findIndex(([,fields])=>fields.some(([k])=>k===x.key.split('.')[0]))}))];draft.updatedAt=at;
+   const at=new Date().toISOString();draft.history=[...(original?.history||[]),...changes(original,draft).map(x=>({...x,at,actor:central.user()?.id||'unavailable',section:GROUPS.findIndex(([,fields])=>fields.some(([k])=>k===x.key.split('.')[0]))}))];draft.updatedAt=at;
    // Re-read after asynchronous file writes so unrelated edits are preserved.
    latest=getSaved();if(!latest)throw Error(storageError);const current=latest.find(r=>r.id===id);
    if(mode==='create'&&current)throw Error('This test ID was created elsewhere. Choose a different ID.');
    if(mode==='edit'&&(!current||stable(current)!==stable(original)))throw Error('This test changed while saving. Your edits are kept here; reopen the latest record.');
    const next=mode==='create'?[...latest,clone(draft)]:latest.map(r=>r.id===id?clone(draft):r);
-   persist(next);rows=next;render();$('pageNotice').textContent=id+' saved.';saving=false;finishClose();
+   await saveCentral(clone(draft),mode==='create');rows=next;render();$('pageNotice').textContent=id+' saved in central database.';saving=false;finishClose();
   }catch(e){notice('Could not save: '+e.message,true)}
   finally{saving=false;$('saveRecord').disabled=false}
  }
- function remove(){
+ async function remove(){
   if(!original||saving)return;try{const latest=getSaved();if(!latest)throw Error(storageError);const current=latest.find(r=>r.id===original.id);if(!current||stable(current)!==stable(original))throw Error('This test changed in another window. Reopen it before deleting.');
-   const archive=JSON.parse(localStorage.getItem(ARCHIVE)||'[]');archive.push({deletedAt:new Date().toISOString(),record:current});localStorage.setItem(ARCHIVE,JSON.stringify(archive));
+   const deleted=await central.request('emission_tests?id=eq.'+encodeURIComponent(original.id)+'&revision=eq.'+revisions[original.id],{method:'DELETE',prefer:'return=representation'});if(!deleted?.length)throw Error('Delete not confirmed. Refresh the latest record.');
    const next=latest.filter(r=>r.id!==original.id);persist(next);rows=next;render();$('pageNotice').textContent=original.id+' deleted.';finishClose();
   }catch(e){notice('Could not delete: '+e.message,true)}
  }
@@ -140,10 +145,13 @@
   if(input.id==='recordAttachments'){const files=[...input.files];if(files.some(file=>file.size>52428800)){notice('Each attachment must be no larger than 50 MB.',true);input.value='';return}collect();pendingFiles.push(...files.map(file=>({id:uuid(),file})));const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}
  });
  $('dialogBody').addEventListener('click',event=>{const button=event.target.closest('[data-download]');if(button)downloadFile(button.dataset.download)});
- window.addEventListener('storage',event=>{if(event.key===KEY){const latest=getSaved();if(latest){rows=latest;render();if(draft&&original&&stable(rows.find(r=>r.id===original.id))!==stable(original))notice('This test changed in another window. Review the latest saved record before saving.',true)}}});
+ window.addEventListener('storage',event=>{if(!connected&&event.key===KEY){const latest=getSaved();if(latest){rows=latest;render();if(draft&&original&&stable(rows.find(r=>r.id===original.id))!==stable(original))notice('This test changed in another window. Review the latest saved record before saving.',true)}}});
  window.addEventListener('beforeunload',event=>{if(dirty()){event.preventDefault();event.returnValue=''}});
- const initial=getSaved();rows=initial||[];if(initial&&!localStorage.getItem(KEY))try{persist(initial)}catch(e){storageError='Tests could not be stored: '+e.message}
- render();
+ window.addEventListener('bamco:central-ready',()=>refreshCentral().catch(error=>{connected=false;storageError=error.message;render()}));
+ window.addEventListener('bamco:central-locked',event=>{connected=false;rows=[];storageError=event.detail.message;render()});
+ $('pageNotice').innerHTML='Open this page from <a href="https://nazanin-ghaemizadeh.github.io/BAMCO-TASK-MANAGEMENT/" target="_blank" rel="noopener">Task Management</a> to connect your account. Existing device records are preserved.';
+ render();if(central.ready())refreshCentral().catch(error=>{storageError=error.message;render()});
+ setInterval(()=>{if(connected&&!draft&&!saving&&document.visibilityState==='visible')refreshCentral().catch(error=>{$('pageNotice').textContent='Refresh failed: '+error.message})},30000);
  // Pure record-result logic for validation without modifying saved records.
  window.EmissionRegisterMath={result,corrected};
 }());
