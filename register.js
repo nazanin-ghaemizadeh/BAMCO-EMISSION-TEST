@@ -154,4 +154,5 @@
  setInterval(()=>{if(connected&&!draft&&!saving&&document.visibilityState==='visible')refreshCentral().catch(error=>{$('pageNotice').textContent='Refresh failed: '+error.message})},30000);
  // Pure record-result logic for validation without modifying saved records.
  window.EmissionRegisterMath={result,corrected};
+ window.EmissionCentralRecords=()=>connected?rows.map(clone):[];
 }());

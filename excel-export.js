@@ -2,7 +2,7 @@
 const KEY='bamco-emission-sheets-v1',OLD='bamco-emission-engineering-v3';
 const schema=window.EMISSION_SCHEMA;
 const NAVY='092E38',GREEN='206C56',SAGE='E5F4EC',INK='19363A',LINE='CBDDD7',WHITE='FFFFFF';
-function records(){let raw=localStorage.getItem(KEY)||localStorage.getItem(OLD);let a=raw?JSON.parse(raw):DEMO_RECORDS;return Array.isArray(a)?a:a.records||[]}
+function records(){if(!window.BamcoCentral?.ready())throw Error('Connect from Task Management first.');return window.EmissionCentralRecords?.()||[]}
 function value(x){return x==null?'':typeof x==='object'?JSON.stringify(x):x}
 function safe(x){return String(x||'Test').replace(/[\\/*?:\[\]]/g,'-').slice(0,31)}
 function notify(msg){let el=document.getElementById('pageNotice');if(el)el.textContent=msg;else alert(msg)}
@@ -18,7 +18,7 @@ async function exportOne(id){
  let row=3;
  function section(name){ws.mergeCells(row,1,row,6);let c=ws.getCell(row,1);c.value=name.toUpperCase();c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+GREEN}};c.font={name:'Times New Roman',size:11,bold:true,color:{argb:'FF'+WHITE}};c.alignment={vertical:'middle',indent:1};ws.getRow(row).height=25;row++}
  function line(cells,header=false){let current=ws.getRow(row);current.height=23;for(let i=1;i<=6;i++){let c=current.getCell(i);c.value=value(cells[i-1]);c.font={name:'Times New Roman',size:10,color:{argb:'FF'+INK},bold:header||i===2};c.alignment={vertical:'middle',wrapText:true};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+(header?'D5E9E0':row%2===0?'F5F9F7':WHITE)}};c.border={top:{style:'thin',color:{argb:'FF'+LINE}},bottom:{style:'thin',color:{argb:'FF'+LINE}},left:{style:'thin',color:{argb:'FF'+LINE}},right:{style:'thin',color:{argb:'FF'+LINE}}}}row++}
- for(const [name,fields] of schema.groups){section(name);if(fields.length){line(['','FIELD','RECORDED VALUE','','',''],true);for(const [key,label] of fields)line(['',label,r[key]])}
+ for(const [name,fields] of schema.groups){section(name);if(fields.length){line(['','FIELD','RECORDED VALUE','','',''],true);for(const [key,label] of fields)line(['',label,key.split('.').reduce((v,k)=>v?.[k],r)])}
  if(name==='Raw emission results'){line(['','POLLUTANT','PHASE 1','PHASE 2','COMBINED','UNIT'],true);for(const p of schema.pollutants)line(['',p,r.results?.[p]?.p1,r.results?.[p]?.p2,r.results?.[p]?.combined,r.resultUnits?.[p]||schema.units[p]||'']);for(const [phase,record] of Object.entries(r.phaseData||{}))line(['',phase+' data',record])}
  if(name==='Calculations and limits'){line(['','POLLUTANT','LIMIT','UNIT','',''],true);for(const p of schema.pollutants)line(['',p,r.limits?.[p]??r['limit'+p],r.limitsUnits?.[p]||schema.units[p]||''])}}
  section('Attachments');line(['','FILE NAME','TYPE','DATE','',''],true);for(const f of r.attachments||[])line(['',f.name,f.kind,f.at]);
