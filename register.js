@@ -16,7 +16,7 @@
   try{const raw=localStorage.getItem(KEY),legacy=raw?null:localStorage.getItem(OLD_KEY);let parsed=raw?JSON.parse(raw):legacy?JSON.parse(legacy):null;
    if(parsed&&!Array.isArray(parsed)&&Array.isArray(parsed.records))parsed=parsed.records;
    if(parsed!==null&&(!Array.isArray(parsed)||parsed.some(r=>!r||typeof r.id!=='string'||!r.id)))throw Error('The saved test register is not valid.');
-   const data=parsed??[];if(new Set(data.map(r=>r.id)).size!==data.length)throw Error('Duplicate test IDs were found in the saved register.');
+   const data=parsed??[window.BAMCO_R83_SAMPLE];if(new Set(data.map(r=>r.id)).size!==data.length)throw Error('Duplicate test IDs were found in the saved register.');
    return data.map(normalize);
   }catch(e){storageError='Saved tests could not be read. The original data has been kept unchanged. '+e.message;return null}
  }
