@@ -132,7 +132,7 @@
    finally{refreshPromise=null}
   })();return refreshPromise;
  }
- function rootWaiting(){const root=$('dashboardPanel');if(root&&!state.loaded)root.innerHTML='<div class="dashboard-loading">Preparing dashboard…</div>'}
+ function rootWaiting(){const root=$('dashboardPanel');if(!root||state.loaded)return;root.innerHTML='<div class="dashboard-loading" role="status"><strong>Dashboard is waiting for an authorized database session.</strong><p>To display live test results, sign in to BAMCO Task Management and open Emission Test from its module menu. Keep the Task Management tab open.</p><p>Opening this page directly does not provide a database session.</p><p><a href="https://nazanin-ghaemizadeh.github.io/BAMCO-TASK-MANAGEMENT/" target="_blank" rel="noopener noreferrer">Open BAMCO Task Management</a></p></div>'}
  function activate(name){const dashboard=name==='dashboard';$('dashboardPanel').hidden=!dashboard;$('registerPanel').hidden=dashboard;$('pageNotice').hidden=dashboard;$('createTest').hidden=dashboard;$('dashboardTab').classList.toggle('is-active',dashboard);$('registerTab').classList.toggle('is-active',!dashboard);$('dashboardTab').toggleAttribute('aria-current',dashboard);$('registerTab').toggleAttribute('aria-current',!dashboard);if(dashboard){if(window.BamcoCentral?.ready()){if(state.loaded)render();refresh()}else rootWaiting()}else clearCharts()}
  $('dashboardTab').onclick=()=>activate('dashboard');$('registerTab').onclick=()=>activate('register');
  window.addEventListener('bamco:central-ready',()=>refresh());
