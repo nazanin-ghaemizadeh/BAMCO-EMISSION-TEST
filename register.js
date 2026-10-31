@@ -13,6 +13,9 @@
  const central=window.BamcoCentral;let connected=false,revisions={};
  let rows=[],draft=null,original=null,cleanDraft=null,mode='open',pendingFiles=[],inputIndex=0,storageError='',saving=false,lastTrigger=null;
  function normalize(r){r.cells??={};r.id=r.cells.C5||r.id;r.date=solarDate(r.cells.C6||r.date);if(r.cells.C6)r.cells.C6=r.date;r.model=r.cells.C15||r.model;r.results??={};r.attachments??=[];r.history??=[];r.phaseData??={};r.limits??={};r.resultUnits??={};r.limitsUnits??={};return r}
+ function combinedCO2(r){const direct=number(r?.results?.CO2?.combined),worksheet=number(r?.cells?.E103);return direct??worksheet??null}
+ function runningMass(r){const current=number(r?.cells?.C110),legacy=number(r?.cells?.C90),co2=combinedCO2(r);if(legacy>0&&current>0&&co2!=null&&Math.abs(current-co2)<0.01)return legacy;return current>0?current:legacy>0?legacy:null}
+ function massRatio(r){const co2=combinedCO2(r),mass=runningMass(r);return co2>0&&mass>0?Number((co2/mass*100).toFixed(4)):''}
  function getSaved(){if(connected)return rows.map(clone);
 
   try{const raw=localStorage.getItem(KEY),legacy=raw?null:localStorage.getItem(OLD_KEY);let parsed=raw?JSON.parse(raw):legacy?JSON.parse(legacy):null;
@@ -54,7 +57,7 @@
  function newTest(){const id=createId();return normalize({id,date:today(),model:'',testStatus:'Draft',cells:{C5:id,C6:today()}})}
  function field(label,path,type='text',options='',section=-1,valueOverride){
   if(path==='cells.C6'){type='text';label='Date (Solar Hijri)';}
-  const value=path==='cells.C111'?(Number(draft.results?.CO2?.combined)>0&&Number(draft.cells?.C110)>0?Number((Number(draft.results.CO2.combined)/Number(draft.cells.C110)*100).toFixed(4)):''):valueOverride!==undefined?valueOverride:getPath(draft,path),editable=mode==='edit'||mode==='create',id='record-field-'+(++inputIndex);
+  const value=path==='cells.C111'?massRatio(draft):valueOverride!==undefined?valueOverride:getPath(draft,path),editable=mode==='edit'||mode==='create',id='record-field-'+(++inputIndex);
   let cell;
   if(!editable||type==='computed')cell='<span class="field-value" '+(type==='computed'?'data-calculated="'+esc(path)+'"':'')+'>'+esc(display(value))+'</span>';
   else{
@@ -91,10 +94,10 @@
   $('dialogNotice').className='';
   $('dialogNotice').textContent=mode==='delete'?'Delete this test and remove it from the register?':mode==='create'?'':mode==='edit'?'Changes are applied when you select Save Test.':'';
  }
- function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();if(draft?.cells){const legacyMass=Number(draft.cells.C90),legacyCo2=Number(draft.cells.C110),actualCo2=Number(draft.results?.CO2?.combined);if(legacyMass>0&&legacyCo2>0&&Math.abs(legacyCo2-actualCo2)<0.01){draft.cells.C110=legacyMass;}}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
+ function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();if(draft?.cells){const mass=runningMass(draft);if(mass>0)draft.cells.C110=mass;}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
- function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||'';const co2=Number(draft.results?.CO2?.combined),mass=Number(draft.cells.C110);draft.cells.C90=mass>0?mass:'';draft.cells.C111=co2>0&&mass>0?Number((co2/mass*100).toFixed(4)):''}}
- function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(el.dataset.calculated==='cells.C111'?(Number(draft.results?.CO2?.combined)>0&&Number(draft.cells?.C110)>0?Number((Number(draft.results.CO2.combined)/Number(draft.cells.C110)*100).toFixed(4)):''):kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
+ function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||'';const mass=runningMass(draft);draft.cells.C90=mass>0?mass:'';draft.cells.C111=massRatio(draft)}}
+ function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(el.dataset.calculated==='cells.C111'?massRatio(draft):kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
  function dirty(){if(!draft||!['edit','create'].includes(mode))return false;collect();return pendingFiles.length>0||stable(draft)!==stable(cleanDraft)}
  function close(){if(saving)return;if(dirty()){$('discardDialog').showModal();return}finishClose()}
  function finishClose(){$('discardDialog').close();$('testDialog').close();document.body.classList.remove('dialog-open');draft=null;original=null;cleanDraft=null;pendingFiles=[];lastTrigger?.focus?.()}
