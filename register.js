@@ -29,7 +29,7 @@
  function corrected(r,p){const raw=number(r.results?.[p]?.combined),factor=number(r.correctionFactor);return raw==null||factor==null||factor<=0?null:raw*factor}
  function explicitResult(value){const s=String(value||'').trim().toLowerCase();return ['pass','passed','قبول','قبولی'].includes(s)?'Pass':['fail','failed','رد','مردود'].includes(s)?'Fail':null}
  function result(r){
-  const explicit=explicitResult(r.finalResult)||explicitResult(r.compliance);if(explicit)return explicit;
+  const explicit=explicitResult(r.cells?.C151)||explicitResult(r.finalResult)||explicitResult(r.compliance);if(explicit)return explicit;
   if(!r.limitStandard||/not assigned|not assessed/i.test(r.limitStandard))return 'Not assessed';
   const applicable=P.filter(p=>number(r.limits?.[p]??r['limit'+p])!=null&&number(r.limits?.[p]??r['limit'+p])>=0);if(!applicable.length)return 'Not assessed';
   let assessed=0,failed=false;for(const p of applicable){const value=corrected(r,p),limit=number(r.limits?.[p]??r['limit'+p]);if(value==null||(r.resultUnits?.[p]||UNIT[p])!==(r.limitsUnits?.[p]||UNIT[p]))continue;assessed++;if(value>limit)failed=true}
@@ -77,7 +77,7 @@
   inputIndex=0;
   $('dialogMode').textContent=mode==='create'?'CREATE TEST':mode==='delete'?'DELETE TEST':mode==='edit'?'EDIT TEST':'TEST DETAILS';
   $('dialogTitle').textContent=mode==='create'?'New emission test':draft.id;
-  $('dialogBody').innerHTML=GROUPS.map(([name,fields],section)=>'<section class="record-section" data-record-section="'+section+'"><h3>'+String(section+1).padStart(2,'0')+' · '+esc(name)+'</h3><table class="field-table"><colgroup><col class="field-label-col"><col class="field-value-col"></colgroup><tbody>'+fields.map(([key,label,type,opts])=>field(label,key,type||'text',opts||'',section)).join('')+extraRows(section)+'</tbody></table></section>').join('');
+  $('dialogBody').innerHTML=GROUPS.map(([name,fields],section)=>'<section class="record-section" data-record-section="'+section+'"><h3>'+String(section+1).padStart(2,'0')+' · '+esc(name)+'</h3><table class="field-table"><colgroup><col class="field-label-col"><col class="field-value-col"></colgroup><tbody>'+fields.map(([key,label,type,opts])=>field(label,key,type||'text',opts||'',section)).join('')+'</tbody></table></section>').join('');
   $('saveRecord').hidden=!['edit','create'].includes(mode);$('editRecord').hidden=mode!=='open';$('confirmDelete').hidden=mode!=='delete';$('cancelDialog').textContent=['edit','create'].includes(mode)?'Cancel':'Close';
   $('dialogNotice').className='';
   $('dialogNotice').textContent=mode==='delete'?'Delete this test and remove it from the register?':mode==='create'?'Enter the test details in order, then select Save Test.':mode==='edit'?'Changes are applied when you select Save Test.':'';
