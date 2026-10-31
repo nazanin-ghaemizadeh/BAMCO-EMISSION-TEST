@@ -43,7 +43,7 @@
  function statusHTML(r){const s=result(r);return s==='Pass'||s==='Fail'?'<span class="status-face '+s.toLowerCase()+'" role="img" aria-label="'+(s==='Pass'?'Pass · green smiling face':'Fail · red crying face')+'" title="'+esc(s)+'">'+FACES[s]+'<span>'+s+'</span></span>':'<span class="pending-status">Not assessed</span>'}
  function render(){
   $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'">Edit</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'">Delete</button></div></td></tr>').join(''):'<tr><td colspan="5" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>';
-  $('createTest').disabled=!connected||Boolean(storageError);if(storageError)$('pageNotice').textContent=storageError;
+  $('createTest').disabled=false;if(storageError)$('pageNotice').textContent=storageError;
  }
  function today(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('-')}
  function uuid(){if(window.crypto?.randomUUID)return window.crypto.randomUUID();const bytes=window.crypto?.getRandomValues?window.crypto.getRandomValues(new Uint8Array(16)):Array.from({length:16},()=>Math.floor(Math.random()*256));return [...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -87,7 +87,7 @@
   $('dialogNotice').className='';
   $('dialogNotice').textContent=mode==='delete'?'Delete this test and remove it from the register?':mode==='create'?'Enter the test details in order, then select Save Test.':mode==='edit'?'Changes are applied when you select Save Test.':'';
  }
- function open(modeName,id,trigger){if(!connected)return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
+ function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
  function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=draft.cells.C6||'';draft.model=draft.cells.C15||''}}
  function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
@@ -107,7 +107,7 @@
   catch(e){notice(e.message,true)}
  }
  async function save(event){
-  event.preventDefault();if(saving||!draft)return;collect();const id=String(draft.cells?.C5||draft.id||'').trim();if(!id||id.length>128||id.includes('/'))return notice('Enter a unique test ID of up to 128 characters, without a slash.',true);
+  event.preventDefault();if(saving||!draft)return;if(!connected||!central.ready()){connectAccount();return;}collect();const id=String(draft.cells?.C5||draft.id||'').trim();if(!id||id.length>128||id.includes('/'))return notice('Enter a unique test ID of up to 128 characters, without a slash.',true);
   
   draft.id=id;draft.cells??={};draft.cells.C5=id;draft.date=draft.cells.C6||'';draft.model=draft.cells.C15||'';let latest=getSaved();if(!latest)return notice(storageError,true);
   const saved=latest.find(r=>r.id===id);
@@ -132,6 +132,12 @@
    const next=latest.filter(r=>r.id!==original.id);persist(next);rows=next;render();$('pageNotice').textContent=original.id+' deleted.';finishClose();
   }catch(e){notice('Could not delete: '+e.message,true)}
  }
+
+ const authDialog=document.createElement('dialog');authDialog.className='account-dialog';authDialog.innerHTML='<form id="accountForm" style="display:grid;gap:12px;padding:24px;min-width:min(320px,75vw)"><h2 dir="rtl">اتصال حساب کاربری</h2><label>نام کاربری<input name="login" autocomplete="username" required style="display:block;width:100%;padding:10px"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" required style="display:block;width:100%;padding:10px"></label><p id="accountError" role="alert"></p><button class="btn primary" type="submit">ورود و اتصال</button><button class="btn" type="button" id="cancelAccount">بستن</button></form>';document.body.append(authDialog);
+ const connectButton=document.createElement('button');connectButton.type='button';connectButton.className='workspace-nav-link';connectButton.textContent='اتصال حساب';document.querySelector('.nav-links').append(connectButton);
+ function connectAccount(){if(!authDialog.open)authDialog.showModal();}
+ connectButton.onclick=connectAccount;document.getElementById('cancelAccount').onclick=()=>authDialog.close();
+ document.getElementById('accountForm').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type="submit"]');button.disabled=true;document.getElementById('accountError').textContent='';try{await central.signIn(form.elements.login.value,form.elements.password.value);form.elements.password.value='';await refreshCentral();connectButton.textContent='حساب متصل است';authDialog.close();if(draft)notice('حساب متصل شد؛ برای ثبت در دیتابیس، Save Test را بزنید.');}catch(error){document.getElementById('accountError').textContent=error.message;}finally{button.disabled=false;}};
  $('createTest').onclick=()=>open('create',null,$('createTest'));
  $('testRows').onclick=event=>{const action=event.target.closest('[data-action]');if(action){if(action.dataset.action==='excel'){window.BAMCOExcel?.exportOne(action.dataset.id);return}open(action.dataset.action,action.dataset.id,action)}};
  $('closeDialog').onclick=close;$('cancelDialog').onclick=close;
@@ -149,7 +155,7 @@
  window.addEventListener('beforeunload',event=>{if(dirty()){event.preventDefault();event.returnValue=''}});
  window.addEventListener('bamco:central-ready',()=>refreshCentral().catch(error=>{connected=false;storageError=error.message;render()}));
  window.addEventListener('bamco:central-locked',event=>{connected=false;rows=[];storageError=event.detail.message;render()});
- $('pageNotice').innerHTML='Open this page from <a href="https://nazanin-ghaemizadeh.github.io/BAMCO-TASK-MANAGEMENT/" target="_blank" rel="noopener">Task Management</a> to connect your account. Existing device records are preserved.';
+ $('pageNotice').textContent='';
  render();if(central.ready())refreshCentral().catch(error=>{storageError=error.message;render()});
  setInterval(()=>{if(connected&&!draft&&!saving&&document.visibilityState==='visible')refreshCentral().catch(error=>{$('pageNotice').textContent='Refresh failed: '+error.message})},30000);
  // Pure record-result logic for validation without modifying saved records.
