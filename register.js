@@ -32,7 +32,7 @@
  function phaseKeys(r){return Array.from({length:Math.max(1,Math.min(8,Number(r.cyclePhaseCount)||2))},(_,i)=>'p'+(i+1))}
  function phaseLabel(r,p){if(p==='combined')return 'Combined';return r.phaseNames?.[p]||((r.cycle==='WLTC'&&Number(r.cyclePhaseCount)===4)?['Low','Medium','High','Extra high'][Number(p.slice(1))-1]:r.cycle==='NEDC'&&Number(r.cyclePhaseCount)===2?['Urban','Extra urban'][Number(p.slice(1))-1]:'Phase '+p.slice(1))}
  function corrected(r,p){const raw=number(r.results?.[p]?.combined),factor=number(r.correctionFactor);return raw==null||factor==null||factor<=0?null:raw*factor}
- function explicitResult(value){const s=String(value||'').trim().toLowerCase();return ['pass','passed','قبول','قبولی'].includes(s)?'Pass':['fail','failed','رد','مردود'].includes(s)?'Fail':null}
+ function explicitResult(value){const s=String(value||'').trim().toLowerCase();return ['pass','passed','Pass','Pass'].includes(s)?'Pass':['fail','failed','Fail','Fail'].includes(s)?'Fail':null}
  function result(r){
   const explicit=explicitResult(r.cells?.C151)||explicitResult(r.finalResult)||explicitResult(r.compliance);if(explicit)return explicit;
   if(!r.limitStandard||/not assigned|not assessed/i.test(r.limitStandard))return 'Not assessed';
@@ -111,7 +111,7 @@
   catch(e){notice(e.message,true)}
  }
  async function save(event){
-  event.preventDefault();if(saving||!draft)return;if(!connected||!central.ready()){central.ask();notice('در حال دریافت ورود شما از تسک‌منیجمنت؛ پس از اتصال دوباره ذخیره کنید.',true);return;}collect();const id=String(draft.cells?.C5||draft.id||'').trim();if(!id||id.length>128||id.includes('/'))return notice('Enter a unique test ID of up to 128 characters, without a slash.',true);
+  event.preventDefault();if(saving||!draft)return;if(!connected||!central.ready()){central.ask();notice('Restoring your Task Management session. Please save again after reconnecting.',true);return;}collect();const id=String(draft.cells?.C5||draft.id||'').trim();if(!id||id.length>128||id.includes('/'))return notice('Enter a unique test ID of up to 128 characters, without a slash.',true);
   
   draft.id=id;draft.cells??={};draft.cells.C5=id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||'';let latest=getSaved();if(!latest)return notice(storageError,true);
   const saved=latest.find(r=>r.id===id);
