@@ -100,10 +100,30 @@
  function avg(values){const a=values.filter(v=>v!=null);return a.length?a.reduce((s,v)=>s+v,0)/a.length:null}
  function cv(values){const a=values.filter(v=>v!=null);if(a.length<2)return null;const m=avg(a);if(!m)return null;return 100*Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/(a.length-1))/Math.abs(m)}
  function sum(values){const a=values.filter(v=>v!=null);return a.length?a.reduce((s,v)=>s+v,0):null}
+ function demonstrationRecords(){
+  const base=window.BAMCO_R83_SAMPLE;
+  if(!base)return [];
+  return Array.from({length:12},(_,i)=>{
+   const r=JSON.parse(JSON.stringify(base));
+   const day=String(i+1).padStart(2,'0');
+   r.id='R83-DEMO-2026-'+String(i+1).padStart(3,'0');r.date='2026-10-'+String(12+i).padStart(2,'0');
+   r.model=i%3===0?'Demo SUV 2.0T':i%3===1?'Demo Sedan 1.5T':'Demo Hybrid 1.8L';
+   r.project='DEMO — Synthetic Data';r.ecu=i<6?'DEMO-CAL-A':'DEMO-CAL-B';r.cycle=i%2?'WLTC Demo':'R83 Type I Demo';
+   r.cells.C5=r.id;r.cells.C6=r.date;r.cells.C15=r.model;r.cells.C10=r.project;r.cells.C41=r.ecu;r.cells.C82=r.cycle;
+   const factor=0.62+(i%5)*0.17+(i>=6?-0.13:0);
+   for(const k of ['C99','D99','E99','C100','D100','E100','C101','D101','E101','C102','D102','E102','C104','D104','E104','C105','D105','E105','C106','D106','E106'])r.cells[k]=Number((Number(base.cells[k])*factor).toPrecision(8));
+   for(const k of ['C103','D103','E103','C110'])r.cells[k]=Number((Number(base.cells[k])*(0.89+i*0.018)).toFixed(2));
+   r.cells.C19=800+i*275;r.cells.E109=5.7+i*0.23;r.cells.C117='Valid — synthetic';
+   r.finalResult=factor>1?'Fail':'Pass';r.cells.C151=r.finalResult;r.demo=true;
+   r.speedTrace=Array.from({length:30},(_,j)=>({time:j*30,target:35+25*Math.sin(j/4),actual:35+25*Math.sin(j/4)+(i%4-1.5)*2}));
+   return normalize(r);
+  });
+ }
+ function showDemoNotice(){const root=$('dashboardPanel');if(!root)return;root.insertAdjacentHTML('afterbegin','<p class="dashboard-demo-notice" role="status">DEMO MODE — 12 synthetic emission tests for chart preview only. These records are NOT saved in the central database and are NOT real test results.</p>')}
  async function refresh(){
-  const root=$('dashboardPanel');if(!root)return;if(!window.BamcoCentral?.ready()){root.innerHTML='<div class="dashboard-loading">Central database connection is unavailable.</div>';return}
+  const root=$('dashboardPanel');if(!root)return;if(!window.BamcoCentral?.ready()){state.rows=demonstrationRecords();state.ids=new Set(state.rows.map(r=>r.id));state.loaded=true;render();showDemoNotice();return}
   root.innerHTML='<div class="dashboard-loading">Loading test data from the central database…</div>';
-  try{const records=await window.BamcoCentral.all('emission_tests');state.rows=records.map(x=>normalize(x.data||x));if(!state.loaded||(!state.ids.size&&state.rows.length)){state.ids=new Set(state.rows.map(r=>r.id));state.loaded=true}render()}catch(error){root.innerHTML='<div class="dashboard-loading">Failed to load dashboard data: '+esc(error.message)+'</div>'}
+  try{const records=await window.BamcoCentral.all('emission_tests');state.rows=records.length?records.map(x=>normalize(x.data||x)):demonstrationRecords();if(!state.loaded||(!state.ids.size&&state.rows.length)){state.ids=new Set(state.rows.map(r=>r.id));state.loaded=true}render();if(!records.length)showDemoNotice()}catch(error){root.innerHTML='<div class="dashboard-loading">Failed to load dashboard data: '+esc(error.message)+'</div>'}
  }
  function activate(name){const dashboard=name==='dashboard';$('dashboardPanel').hidden=!dashboard;$('registerPanel').hidden=dashboard;$('pageNotice').hidden=dashboard;$('createTest').hidden=dashboard;$('dashboardTab').classList.toggle('is-active',dashboard);$('registerTab').classList.toggle('is-active',!dashboard);$('dashboardTab').toggleAttribute('aria-current',dashboard);$('registerTab').toggleAttribute('aria-current',!dashboard);if(dashboard)refresh();else clearCharts()}
  $('dashboardTab').onclick=()=>activate('dashboard');$('registerTab').onclick=()=>activate('register');
