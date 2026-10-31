@@ -17,3 +17,6 @@
 .dashboard-panel canvas{direction:ltr}
 
 .dashboard-demo-notice{margin:0 0 16px;padding:12px 16px;border:1px solid #d8ae62;background:#fff8e9;color:#684711;border-radius:12px;font-family:"Times New Roman",Times,serif;text-align:left;direction:ltr;font-weight:700}
+
+/* All chart surfaces and chart-related labels use Times New Roman. */
+.dashboard-panel .dashboard-card,.dashboard-panel .dashboard-card *, .dashboard-panel .chart-box,.dashboard-panel .chart-box *, .dashboard-panel .analytics-point-grid,.dashboard-panel .analytics-point-grid *{font-family:"Times New Roman",Times,serif!important;}
