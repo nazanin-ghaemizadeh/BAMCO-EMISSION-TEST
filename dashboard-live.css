@@ -9,3 +9,9 @@
 @media(max-width:1100px){.dashboard-kpis{grid-template-columns:repeat(3,1fr)}.dashboard-filter-grid{grid-template-columns:repeat(3,minmax(120px,1fr))}.dashboard-unit-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.nav-links{gap:4px;overflow-x:auto}.workspace-nav-link{min-width:125px}.dashboard-hero{flex-direction:column;padding:18px}.dashboard-hero h2{font-size:22px}.dashboard-kpis{grid-template-columns:repeat(2,1fr)}.dashboard-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-choice-row{grid-template-columns:1fr}.dashboard-grid{grid-template-columns:1fr}.dashboard-card.wide{grid-column:auto}.dashboard-card,.dashboard-filter-body{padding:13px}.dashboard-card .chart-box,.dashboard-card.wide .chart-box{height:255px}}
 @media(max-width:460px){.dashboard-kpis{grid-template-columns:1fr}.dashboard-filter-grid{grid-template-columns:1fr}.dashboard-card .chart-box,.dashboard-card.wide .chart-box{height:230px}}
+
+/* Dashboard: English typography and left-to-right content */
+.dashboard-panel,.dashboard-panel *{font-family:"Times New Roman",Times,serif!important;direction:ltr;text-align:left}
+.dashboard-panel .dashboard-kpis,.dashboard-panel .dashboard-grid,.dashboard-panel .dashboard-filter-grid{direction:ltr}
+.dashboard-panel .dashboard-hero{display:none!important}
+.dashboard-panel canvas{direction:ltr}
