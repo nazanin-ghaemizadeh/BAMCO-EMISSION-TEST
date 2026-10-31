@@ -3,7 +3,7 @@
 const schema=window.EMISSION_SCHEMA;if(!schema)return;
 for(const [section,fields] of schema.groups){
  for(const f of fields){const k=f[0];
- if(k==='cells.C49'||k==='cells.C61'||k==='cells.C62'||k==='cells.C74'||k==='cells.C75'){f[1]=f[1].replace(/\\s*\\(kPa\\)/g,'').replace(/\\s*\\(mbar\\)/g,'')+' (mbar)';}
+ if(k==='cells.C49'||k==='cells.C61'||k==='cells.C62'||k==='cells.C74'||k==='cells.C75'){f[1]=f[1].split(' (kPa)').join('').split(' (mbar)').join('')+' (mbar)';}
  if(k==='cells.C90')f[1]='Mass in running order (kg)';
  if(k==='cells.C110')f[1]='Weighted CO2 (g/km)';
  if(k==='cells.C111'){f[1]='CO2 / Mass in running order x 100';f[2]='computed';}
