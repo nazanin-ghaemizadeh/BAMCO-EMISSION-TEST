@@ -50,7 +50,7 @@
   root.innerHTML='<div class="dashboard-hero"><div><h2>Emission Test Analytics Dashboard</h2><p>All charts are sourced directly from central database records.</p></div><span class="live-badge">Live Central Database</span></div>'+
    '<div class="dashboard-kpis">'+[['Selected Tests',list.length],['Measured Results',measured],['Pass Rate',assessed?fmt(100*pass/assessed,1)+'%':'Unknown'],['Failed Tests',fail],['Unknown Limits',list.reduce((s,r)=>s+[...state.pollutants].filter(p=>limitValue(r,p)==null).length,0)]].map((x,i)=>'<div class="dashboard-kpi '+(i===3&&fail?'alert':'')+'"><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join('')+'</div>'+
    '<details class="dashboard-filters" open><summary>Filters and Data Selection</summary><div class="dashboard-filter-body"><div class="dashboard-filter-grid">'+selectHTML('dfProject','Project','project')+selectHTML('dfModel','Vehicle','model')+selectHTML('dfEcu','Calibration Version','ecu')+selectHTML('dfCycle','Test Cycle','cycle')+'<label>Phase<select id="dfPhase"><option value="combined" '+(state.phase==='combined'?'selected':'')+'>Combined</option><option value="p1" '+(state.phase==='p1'?'selected':'')+'>Phase 1</option><option value="p2" '+(state.phase==='p2'?'selected':'')+'>Phase 2</option></select></label><label>From Solar Date<input id="dfFrom" inputmode="numeric" placeholder="1405/01/01" value="'+esc(state.from)+'"></label><label>To Solar Date<input id="dfTo" inputmode="numeric" placeholder="1405/12/29" value="'+esc(state.to)+'"></label></div><div class="dashboard-choice-row"><div class="dashboard-choice-group"><span>Tests ('+list.length+' of '+visible.length+')</span><div class="dashboard-choices">'+visible.map(r=>'<label class="dashboard-choice"><input type="checkbox" data-test-id="'+esc(r.id)+'" '+(state.ids.has(r.id)?'checked':'')+'>'+esc(r.id)+'</label>').join('')+'</div></div><div class="dashboard-choice-group"><span>Pollutants</span><div class="dashboard-choices">'+P.map(p=>'<label class="dashboard-choice"><input type="checkbox" data-pollutant="'+p+'" '+(state.pollutants.has(p)?'checked':'')+'>'+p+'</label>').join('')+'</div></div></div><div class="dashboard-filter-actions"><button class="btn primary" id="applyDashboardFilters">Apply Filters</button><button class="btn" id="selectVisibleTests">Select All Filtered Tests</button><button class="btn" id="resetDashboardFilters">Reset</button></div></div></details>'+
-   (list.length?sectionsHTML(list):'<div class="dashboard-empty">No records match the selected filters.</div>')+'<p class="dashboard-footnote">Unknown Limits; missing results and incompatible units are not treated as zero. The speed chart requires raw time-speed data.</p>';
+   (list.length?sectionsHTML(list):'<div class="dashboard-empty">No records match the selected filters.</div>');
   bind();if(list.length)draw(list);
  }
  function sectionsHTML(list){return '<section class="dashboard-section"><h2 class="dashboard-section-title">Compliance and Limits</h2><div class="dashboard-grid">'+unitComparisonHTML()+card(2,'Percentage of Legal Limit','The 100% reference line indicates the recorded limit.','utilization',true)+card(3,'Remaining Margin or Exceedance','Positive values indicate margin; negative values indicate exceedance.','headroom',true)+heatmapHTML(list)+card(5,'Raw vs Corrected Results','Uses the correction factor recorded for each test.','rawCorrected')+card(6,'Test Phase Comparison','Phase 1, Phase 2 and combined results for the selected pollutant.','phaseProfile')+'</div></section>'+
@@ -100,14 +100,22 @@
  function avg(values){const a=values.filter(v=>v!=null);return a.length?a.reduce((s,v)=>s+v,0)/a.length:null}
  function cv(values){const a=values.filter(v=>v!=null);if(a.length<2)return null;const m=avg(a);if(!m)return null;return 100*Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/(a.length-1))/Math.abs(m)}
  function sum(values){const a=values.filter(v=>v!=null);return a.length?a.reduce((s,v)=>s+v,0):null}
+ let refreshPromise=null;
  async function refresh(){
-  const root=$('dashboardPanel');if(!root)return;if(!window.BamcoCentral?.ready()){root.innerHTML='<div class="dashboard-loading">Central database connection is unavailable.</div>';return}
-  root.innerHTML='<div class="dashboard-loading">Loading test data from the central database…</div>';
-  try{const records=await window.BamcoCentral.all('emission_tests');state.rows=records.map(x=>normalize(x.data||x));if(!state.loaded||(!state.ids.size&&state.rows.length)){state.ids=new Set(state.rows.map(r=>r.id));state.loaded=true}render()}catch(error){root.innerHTML='<div class="dashboard-loading">Failed to load dashboard data: '+esc(error.message)+'</div>'}
+  const root=$('dashboardPanel');if(!root)return;
+  if(!window.BamcoCentral?.ready()){if(!state.loaded)root.innerHTML='<div class="dashboard-loading">Central database connection is unavailable.</div>';return}
+  if(refreshPromise)return refreshPromise;
+  refreshPromise=(async()=>{
+   try{const records=await window.BamcoCentral.all('emission_tests');state.rows=records.map(x=>normalize(x.data||x));if(!state.loaded||(!state.ids.size&&state.rows.length)){state.ids=new Set(state.rows.map(r=>r.id));state.loaded=true}if(!$('dashboardPanel').hidden)render()}
+   catch(error){if(!state.loaded&& !$('dashboardPanel').hidden)root.innerHTML='<div class="dashboard-loading">Failed to load dashboard data: '+esc(error.message)+'</div>'}
+   finally{refreshPromise=null}
+  })();return refreshPromise;
  }
- function activate(name){const dashboard=name==='dashboard';$('dashboardPanel').hidden=!dashboard;$('registerPanel').hidden=dashboard;$('pageNotice').hidden=dashboard;$('createTest').hidden=dashboard;$('dashboardTab').classList.toggle('is-active',dashboard);$('registerTab').classList.toggle('is-active',!dashboard);$('dashboardTab').toggleAttribute('aria-current',dashboard);$('registerTab').toggleAttribute('aria-current',!dashboard);if(dashboard)refresh();else clearCharts()}
+ function rootWaiting(){const root=$('dashboardPanel');if(root&&!state.loaded)root.innerHTML='<div class="dashboard-loading">Preparing dashboard…</div>'}
+ function activate(name){const dashboard=name==='dashboard';$('dashboardPanel').hidden=!dashboard;$('registerPanel').hidden=dashboard;$('pageNotice').hidden=dashboard;$('createTest').hidden=dashboard;$('dashboardTab').classList.toggle('is-active',dashboard);$('registerTab').classList.toggle('is-active',!dashboard);$('dashboardTab').toggleAttribute('aria-current',dashboard);$('registerTab').toggleAttribute('aria-current',!dashboard);if(dashboard){if(state.loaded)render();else if(window.BamcoCentral?.ready())refresh();else rootWaiting()}else clearCharts()}
  $('dashboardTab').onclick=()=>activate('dashboard');$('registerTab').onclick=()=>activate('register');
- window.addEventListener('bamco:central-ready',()=>{if(!$('dashboardPanel').hidden)refresh()});
+ window.addEventListener('bamco:central-ready',()=>refresh());
  window.addEventListener('bamco:central-locked',event=>{if(!$('dashboardPanel').hidden)$('dashboardPanel').innerHTML='<div class="dashboard-loading">'+esc(event.detail?.message||'Database connection is unavailable.')+'</div>'});
- setInterval(()=>{if(!$('dashboardPanel').hidden&&document.visibilityState==='visible'&&window.BamcoCentral?.ready())refresh()},30000);
+ setInterval(()=>{if(document.visibilityState==='visible'&&window.BamcoCentral?.ready())refresh()},30000);
+ if(window.BamcoCentral?.ready())refresh();
 }());
