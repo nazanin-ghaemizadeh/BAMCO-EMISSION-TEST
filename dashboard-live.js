@@ -31,7 +31,7 @@
  }
  function normalize(r){
   const t1=n(cell(r,'C57')),t2=n(cell(r,'C58'));
-  return {...r,id:String(value(r,'id','C5')||'—'),date:String(value(r,'date','C6')),model:String(value(r,'model','C15')),project:String(value(r,'project','testPurpose','C10')||'No project'),ecu:String(value(r,'ecu','calibration','C41')||'Unknown'),cycle:String(value(r,'cycle','C82')||'Unknown'),mileage:n(value(r,'mileage','C19')),temperature:n(r.temperature)??(t1!=null&&t2!=null?(t1+t2)/2:t1??t2),fuel:n(r.fuelConsumption)??n(cell(r,'E109')),co2:n(r.co2Weighted)??n(cell(r,'C110'))??phaseValue(r,'CO2','combined'),validity:String(value(r,'validity','C117')||'Not assessed'),speedTrace:Array.isArray(r.speedTrace)?r.speedTrace:[]};
+  return {...r,id:String(value(r,'id','C5')||'—'),date:String(value(r,'date','C6')),model:String(value(r,'model','C15')),project:String(value(r,'project','testPurpose','C10')||'No project'),ecu:String(value(r,'ecu','calibration','C41')||'Unknown'),cycle:String(value(r,'cycle','C82')||'Unknown'),mileage:n(value(r,'mileage','C19')),temperature:n(r.temperature)??(t1!=null&&t2!=null?(t1+t2)/2:t1??t2),fuel:n(r.fuelConsumption)??n(cell(r,'E109')),co2:phaseValue(r,'CO2','combined')??n(r.co2Weighted),validity:String(value(r,'validity','C117')||'Not assessed'),speedTrace:Array.isArray(r.speedTrace)?r.speedTrace:[]};
  }
  function filtered(){return state.rows.filter(r=>(!state.project||r.project===state.project)&&(!state.model||r.model===state.model)&&(!state.ecu||r.ecu===state.ecu)&&(!state.cycle||r.cycle===state.cycle)&&(!state.from||r.date>=state.from)&&(!state.to||r.date<=state.to))}
  function selected(){return filtered().filter(r=>state.ids.has(r.id))}
@@ -125,15 +125,16 @@
   if(!window.BamcoCentral?.ready()){if(!state.loaded)root.innerHTML='<div class="dashboard-loading">Central database connection is unavailable.</div>';return}
   if(refreshPromise)return refreshPromise;
   refreshPromise=(async()=>{
-   try{const records=await window.BamcoCentral.all('emission_tests');state.rows=records.map(x=>normalize(x.data||x));if(!state.loaded||(!state.ids.size&&state.rows.length)){state.ids=new Set(state.rows.map(r=>r.id));state.loaded=true}if(!$('dashboardPanel').hidden)render()}
+   try{const records=await window.BamcoCentral.all('emission_tests');state.rows=records.map(x=>normalize(x.data||x));{const latestIds=new Set(state.rows.map(r=>r.id));state.ids=new Set([...state.ids].filter(id=>latestIds.has(id)));for(const id of latestIds)state.ids.add(id);state.loaded=true;}if(!$('dashboardPanel').hidden)render()}
    catch(error){if(!state.loaded&& !$('dashboardPanel').hidden)root.innerHTML='<div class="dashboard-loading">Failed to load dashboard data: '+esc(error.message)+'</div>'}
    finally{refreshPromise=null}
   })();return refreshPromise;
  }
  function rootWaiting(){const root=$('dashboardPanel');if(root&&!state.loaded)root.innerHTML='<div class="dashboard-loading">Preparing dashboard…</div>'}
- function activate(name){const dashboard=name==='dashboard';$('dashboardPanel').hidden=!dashboard;$('registerPanel').hidden=dashboard;$('pageNotice').hidden=dashboard;$('createTest').hidden=dashboard;$('dashboardTab').classList.toggle('is-active',dashboard);$('registerTab').classList.toggle('is-active',!dashboard);$('dashboardTab').toggleAttribute('aria-current',dashboard);$('registerTab').toggleAttribute('aria-current',!dashboard);if(dashboard){if(state.loaded)render();else if(window.BamcoCentral?.ready())refresh();else rootWaiting()}else clearCharts()}
+ function activate(name){const dashboard=name==='dashboard';$('dashboardPanel').hidden=!dashboard;$('registerPanel').hidden=dashboard;$('pageNotice').hidden=dashboard;$('createTest').hidden=dashboard;$('dashboardTab').classList.toggle('is-active',dashboard);$('registerTab').classList.toggle('is-active',!dashboard);$('dashboardTab').toggleAttribute('aria-current',dashboard);$('registerTab').toggleAttribute('aria-current',!dashboard);if(dashboard){if(window.BamcoCentral?.ready()){if(state.loaded)render();refresh()}else rootWaiting()}else clearCharts()}
  $('dashboardTab').onclick=()=>activate('dashboard');$('registerTab').onclick=()=>activate('register');
  window.addEventListener('bamco:central-ready',()=>refresh());
+ window.addEventListener('bamco:emission-tests-updated',()=>refresh());
  window.addEventListener('bamco:central-locked',event=>{if(!$('dashboardPanel').hidden)$('dashboardPanel').innerHTML='<div class="dashboard-loading">'+esc(event.detail?.message||'Database connection is unavailable.')+'</div>'});
  setInterval(()=>{if(document.visibilityState==='visible'&&window.BamcoCentral?.ready())refresh()},30000);
  if(window.BamcoCentral?.ready())refresh();
