@@ -54,7 +54,7 @@
  function newTest(){const id=createId();return normalize({id,date:today(),model:'',testStatus:'Draft',cells:{C5:id,C6:today()}})}
  function field(label,path,type='text',options='',section=-1,valueOverride){
   if(path==='cells.C6'){type='text';label='Date (Solar Hijri)';}
-  const value=valueOverride!==undefined?valueOverride:getPath(draft,path),editable=mode==='edit'||mode==='create',id='record-field-'+(++inputIndex);
+  const value=path==='cells.C111'?(Number(draft.cells?.C110)>0&&Number(draft.cells?.C90)>0?Number((Number(draft.cells.C110)/Number(draft.cells.C90)*100).toFixed(4)):''):valueOverride!==undefined?valueOverride:getPath(draft,path),editable=mode==='edit'||mode==='create',id='record-field-'+(++inputIndex);
   let cell;
   if(!editable||type==='computed')cell='<span class="field-value" '+(type==='computed'?'data-calculated="'+esc(path)+'"':'')+'>'+esc(display(value))+'</span>';
   else{
@@ -94,7 +94,7 @@
  function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
  function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||'';const co2=Number(draft.cells.C110),mass=Number(draft.cells.C90);draft.cells.C111=co2>0&&mass>0?Number((co2/mass*100).toFixed(4)):''}}
- function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
+ function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(el.dataset.calculated==='cells.C111'?(Number(draft.cells?.C110)>0&&Number(draft.cells?.C90)>0?Number((Number(draft.cells.C110)/Number(draft.cells.C90)*100).toFixed(4)):''):kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
  function dirty(){if(!draft||!['edit','create'].includes(mode))return false;collect();return pendingFiles.length>0||stable(draft)!==stable(cleanDraft)}
  function close(){if(saving)return;if(dirty()){$('discardDialog').showModal();return}finishClose()}
  function finishClose(){$('discardDialog').close();$('testDialog').close();document.body.classList.remove('dialog-open');draft=null;original=null;cleanDraft=null;pendingFiles=[];lastTrigger?.focus?.()}
