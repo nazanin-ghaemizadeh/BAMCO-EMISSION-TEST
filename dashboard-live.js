@@ -103,7 +103,7 @@
  async function refresh(){
   const root=$('dashboardPanel');if(!root)return;if(!window.BamcoCentral?.ready()){root.innerHTML='<div class="dashboard-loading">Central database connection is unavailable.</div>';return}
   root.innerHTML='<div class="dashboard-loading">Loading test data from the central database…</div>';
-  try{const records=await window.BamcoCentral.all('emission_tests');state.rows=records.map(x=>normalize(x.data||x));if(!state.loaded||(!state.ids.size&&state.rows.length)){state.ids=new Set(state.rows.map(r=>r.id));state.loaded=true}render()}catch(error){root.innerHTML='<div class="dashboard-loading">دریافت داده‌های داشبوFail ناموفق بود: '+esc(error.message)+'</div>'}
+  try{const records=await window.BamcoCentral.all('emission_tests');state.rows=records.map(x=>normalize(x.data||x));if(!state.loaded||(!state.ids.size&&state.rows.length)){state.ids=new Set(state.rows.map(r=>r.id));state.loaded=true}render()}catch(error){root.innerHTML='<div class="dashboard-loading">Failed to load dashboard data: '+esc(error.message)+'</div>'}
  }
  function activate(name){const dashboard=name==='dashboard';$('dashboardPanel').hidden=!dashboard;$('registerPanel').hidden=dashboard;$('pageNotice').hidden=dashboard;$('createTest').hidden=dashboard;$('dashboardTab').classList.toggle('is-active',dashboard);$('registerTab').classList.toggle('is-active',!dashboard);$('dashboardTab').toggleAttribute('aria-current',dashboard);$('registerTab').toggleAttribute('aria-current',!dashboard);if(dashboard)refresh();else clearCharts()}
  $('dashboardTab').onclick=()=>activate('dashboard');$('registerTab').onclick=()=>activate('register');
