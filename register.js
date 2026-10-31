@@ -129,7 +129,7 @@
    if(mode==='create'&&current)throw Error('This test ID was created elsewhere. Choose a different ID.');
    if(mode==='edit'&&(!current||stable(current)!==stable(original)))throw Error('This test changed while saving. Your edits are kept here; reopen the latest record.');
    const next=mode==='create'?[...latest,clone(draft)]:latest.map(r=>r.id===id?clone(draft):r);
-   await saveCentral(clone(draft),mode==='create');rows=next;render();$('pageNotice').textContent=id+' saved in central database.';saving=false;finishClose();
+   await saveCentral(clone(draft),mode==='create');rows=next;render();window.dispatchEvent(new CustomEvent('bamco:emission-tests-updated',{detail:{id}}));$('pageNotice').textContent=id+' saved in central database.';saving=false;finishClose();
   }catch(e){notice('Could not save: '+e.message,true)}
   finally{saving=false;$('saveRecord').disabled=false}
  }
