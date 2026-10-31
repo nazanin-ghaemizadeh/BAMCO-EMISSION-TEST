@@ -2,9 +2,9 @@
 (()=>{'use strict';
  const URL='https://zhhongjhhbvpmoquvkhl.supabase.co',KEY='sb_publishable_OtVZC49dnnQarqPv3XLgDw_EUKC7FtD',ORIGIN='https://nazanin-ghaemizadeh.github.io';
  const module=document.currentScript.dataset.module,feature=module==='spc'?'statisticalProcessControl':'emissionTests';
- let token='',user=null,ready=false,generation=0,checking=false,direct=false,refreshToken='',refreshTimer;
+ let token='',user=null,ready=false,generation=0,checking=false;
  const emit=(type,detail)=>window.dispatchEvent(new CustomEvent(type,{detail}));
- function lock(message){generation++;clearTimeout(refreshTimer);refreshToken='';direct=false;token='';user=null;ready=false;emit('bamco:central-locked',{message});}
+ function lock(message){generation++;token='';user=null;ready=false;emit('bamco:central-locked',{message});}
  async function request(path,{method='GET',body,prefer,storage=false,blob=false}={}){
   if(!token||!user)throw Error('Open this module from Task Management after signing in.');
   const before=generation,headers={apikey:KEY,Authorization:'Bearer '+token};
@@ -28,23 +28,7 @@
    if(attempt!==generation)return;user=identity;ready=true;emit('bamco:central-ready',{user:identity});
   }catch(error){if(attempt===generation)lock(error.message);}finally{checking=false;}
  }
- function ask(){try{if(window.opener&&!window.opener.closed)window.opener.postMessage({type:'bamco.'+module+'.request-session'},ORIGIN);else if(ready&&!direct)lock('Task Management was closed. Reopen this module from Task Management.');}catch{lock('Reopen this module from Task Management.');}}
+ function ask(){try{if(window.opener&&!window.opener.closed)window.opener.postMessage({type:'bamco.'+module+'.request-session'},ORIGIN);else if(ready)lock('Task Management was closed. Reopen this module from Task Management.');}catch{lock('Reopen this module from Task Management.');}}
 
- async function acceptDirect(data){
-  generation++;token=data.access_token;user=data.user;ready=false;
-  const allowed=await request('rpc/can_access_feature',{method:'POST',body:{p_feature_key:feature,p_action:'view'}});
-  if(!allowed){lock('This account does not have access to emission tests.');throw Error('This account does not have access to emission tests.');}
-  direct=true;ready=true;refreshToken=data.refresh_token;clearTimeout(refreshTimer);
-  refreshTimer=setTimeout(async()=>{try{const response=await fetch(URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});if(!response.ok)throw Error('Session expired. Sign in again.');await acceptDirect(await response.json());}catch(error){lock(error.message);}},Math.max(30000,((data.expires_in||3600)-60)*1000));return user;
- }
- async function signIn(login,password){
-  const entered=login.trim().toLowerCase(),primary=entered.includes('@')?entered:entered+'@no-email.invalid',legacy=entered.includes('@')?entered.split('@')[0]+'@no-email.invalid':primary;
-  for(const email of [...new Set([primary,legacy])]){
-   const response=await fetch(URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})}),data=await response.json();
-   if(response.ok)return acceptDirect(data);
-   if(!['invalid_credentials'].includes(data.error_code||data.code))throw Error(data.msg||data.message||data.error_description||'Sign-in failed.');
-  }
-  throw Error('نام کاربری یا رمز عبور اشتباه است.');
- }
- window.BamcoCentral=Object.freeze({request,all,signIn,user:()=>user,ready:()=>ready,ask});window.addEventListener('message',receive);setInterval(ask,30000);const retry=setInterval(()=>{if(ready)clearInterval(retry);else ask();},2000);window.addEventListener('focus',ask);ask();
+ window.BamcoCentral=Object.freeze({request,all,user:()=>user,ready:()=>ready,ask});window.addEventListener('message',receive);setInterval(ask,30000);const retry=setInterval(()=>{if(ready)clearInterval(retry);else ask();},2000);window.addEventListener('focus',ask);ask();
 })();

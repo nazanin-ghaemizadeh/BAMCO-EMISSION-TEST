@@ -12,7 +12,7 @@
  };
  const central=window.BamcoCentral;let connected=false,revisions={};
  let rows=[],draft=null,original=null,cleanDraft=null,mode='open',pendingFiles=[],inputIndex=0,storageError='',saving=false,lastTrigger=null;
- function normalize(r){r.cells??={};r.id=r.cells.C5||r.id;r.date=r.cells.C6||r.date;r.model=r.cells.C15||r.model;r.results??={};r.attachments??=[];r.history??=[];r.phaseData??={};r.limits??={};r.resultUnits??={};r.limitsUnits??={};return r}
+ function normalize(r){r.cells??={};r.id=r.cells.C5||r.id;r.date=solarDate(r.cells.C6||r.date);if(r.cells.C6)r.cells.C6=r.date;r.model=r.cells.C15||r.model;r.results??={};r.attachments??=[];r.history??=[];r.phaseData??={};r.limits??={};r.resultUnits??={};r.limitsUnits??={};return r}
  function getSaved(){if(connected)return rows.map(clone);
 
   try{const raw=localStorage.getItem(KEY),legacy=raw?null:localStorage.getItem(OLD_KEY);let parsed=raw?JSON.parse(raw):legacy?JSON.parse(legacy):null;
@@ -45,17 +45,21 @@
   $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'">Edit</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'">Delete</button></div></td></tr>').join(''):'<tr><td colspan="5" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>';
   $('createTest').disabled=false;if(storageError)$('pageNotice').textContent=storageError;
  }
- function today(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('-')}
+ function latinDigits(value){return String(value??'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)))}
+ function solarDate(value){const text=latinDigits(value).trim(),match=text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);if(!match)return text;if(Number(match[1])<1700)return match[1]+'/'+match[2].padStart(2,'0')+'/'+match[3].padStart(2,'0');const date=new Date(Date.UTC(+match[1],+match[2]-1,+match[3],12));const parts=new Intl.DateTimeFormat('en-US-u-ca-persian',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('/');}
+ function today(){const parts=new Intl.DateTimeFormat('en-US-u-ca-persian',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('/')}
+
  function uuid(){if(window.crypto?.randomUUID)return window.crypto.randomUUID();const bytes=window.crypto?.getRandomValues?window.crypto.getRandomValues(new Uint8Array(16)):Array.from({length:16},()=>Math.floor(Math.random()*256));return [...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
  function createId(){let id;do{id='R83-'+today().slice(0,4)+'-'+uuid().slice(0,8).toUpperCase()}while(rows.some(r=>r.id===id));return id}
  function newTest(){const id=createId();return normalize({id,date:today(),model:'',testStatus:'Draft',cells:{C5:id,C6:today()}})}
  function field(label,path,type='text',options='',section=-1,valueOverride){
+  if(path==='cells.C6'){type='text';label='Date (Solar Hijri)';}
   const value=valueOverride!==undefined?valueOverride:getPath(draft,path),editable=mode==='edit'||mode==='create',id='record-field-'+(++inputIndex);
   let cell;
   if(!editable||type==='computed')cell='<span class="field-value" '+(type==='computed'?'data-calculated="'+esc(path)+'"':'')+'>'+esc(display(value))+'</span>';
   else{
    const readOnly=path==='cells.C5'&&mode!=='create';
-   const attrs=' id="'+id+'" data-key="'+esc(path)+'" data-section="'+section+'" '+(readOnly?'readonly ':'')+(path==='cells.C5'?'required maxlength="128" ':'')+(path==='cyclePhaseCount'?'min="1" max="8" ':'');
+   const attrs=(path==='cells.C6'?' placeholder="1405/08/09" inputmode="numeric" pattern="[0-9۰-۹٠-٩]{4}/[0-9۰-۹٠-٩]{2}/[0-9۰-۹٠-٩]{2}" ':'')+' id="'+id+'" data-key="'+esc(path)+'" data-section="'+section+'" '+(readOnly?'readonly ':'')+(path==='cells.C5'?'required maxlength="128" ':'')+(path==='cyclePhaseCount'?'min="1" max="8" ':'');
    if(type==='select'){
     const opts=options.split('|').filter(Boolean);if(value!=null&&value!==''&&!opts.includes(String(value)))opts.unshift(String(value));
     cell='<select'+attrs+'><option value="">Select…</option>'+opts.map(v=>'<option value="'+esc(v)+'" '+(v===String(value)?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select>';
@@ -89,7 +93,7 @@
  }
  function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
- function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=draft.cells.C6||'';draft.model=draft.cells.C15||''}}
+ function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||''}}
  function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
  function dirty(){if(!draft||!['edit','create'].includes(mode))return false;collect();return pendingFiles.length>0||stable(draft)!==stable(cleanDraft)}
  function close(){if(saving)return;if(dirty()){$('discardDialog').showModal();return}finishClose()}
@@ -107,9 +111,9 @@
   catch(e){notice(e.message,true)}
  }
  async function save(event){
-  event.preventDefault();if(saving||!draft)return;if(!connected||!central.ready()){connectAccount();return;}collect();const id=String(draft.cells?.C5||draft.id||'').trim();if(!id||id.length>128||id.includes('/'))return notice('Enter a unique test ID of up to 128 characters, without a slash.',true);
+  event.preventDefault();if(saving||!draft)return;if(!connected||!central.ready()){central.ask();notice('در حال دریافت ورود شما از تسک‌منیجمنت؛ پس از اتصال دوباره ذخیره کنید.',true);return;}collect();const id=String(draft.cells?.C5||draft.id||'').trim();if(!id||id.length>128||id.includes('/'))return notice('Enter a unique test ID of up to 128 characters, without a slash.',true);
   
-  draft.id=id;draft.cells??={};draft.cells.C5=id;draft.date=draft.cells.C6||'';draft.model=draft.cells.C15||'';let latest=getSaved();if(!latest)return notice(storageError,true);
+  draft.id=id;draft.cells??={};draft.cells.C5=id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||'';let latest=getSaved();if(!latest)return notice(storageError,true);
   const saved=latest.find(r=>r.id===id);
   if(mode==='create'&&saved)return notice('This test ID already exists. Choose a different ID.',true);
   if(mode==='edit'&&(!saved||stable(saved)!==stable(original)))return notice('This test changed in another window. Your edits are kept here; reopen the latest record before saving.',true);
@@ -133,11 +137,6 @@
   }catch(e){notice('Could not delete: '+e.message,true)}
  }
 
- const authDialog=document.createElement('dialog');authDialog.className='account-dialog';authDialog.innerHTML='<form id="accountForm" style="display:grid;gap:12px;padding:24px;min-width:min(320px,75vw)"><h2 dir="rtl">اتصال حساب کاربری</h2><label>نام کاربری<input name="login" autocomplete="username" required style="display:block;width:100%;padding:10px"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" required style="display:block;width:100%;padding:10px"></label><p id="accountError" role="alert"></p><button class="btn primary" type="submit">ورود و اتصال</button><button class="btn" type="button" id="cancelAccount">بستن</button></form>';document.body.append(authDialog);
- const connectButton=document.createElement('button');connectButton.type='button';connectButton.className='workspace-nav-link';connectButton.textContent='اتصال حساب';document.querySelector('.nav-links').append(connectButton);
- function connectAccount(){if(!authDialog.open)authDialog.showModal();}
- connectButton.onclick=connectAccount;document.getElementById('cancelAccount').onclick=()=>authDialog.close();
- document.getElementById('accountForm').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type="submit"]');button.disabled=true;document.getElementById('accountError').textContent='';try{await central.signIn(form.elements.login.value,form.elements.password.value);form.elements.password.value='';await refreshCentral();connectButton.textContent='حساب متصل است';authDialog.close();if(draft)notice('حساب متصل شد؛ برای ثبت در دیتابیس، Save Test را بزنید.');}catch(error){document.getElementById('accountError').textContent=error.message;}finally{button.disabled=false;}};
  $('createTest').onclick=()=>open('create',null,$('createTest'));
  $('testRows').onclick=event=>{const action=event.target.closest('[data-action]');if(action){if(action.dataset.action==='excel'){window.BAMCOExcel?.exportOne(action.dataset.id);return}open(action.dataset.action,action.dataset.id,action)}};
  $('closeDialog').onclick=close;$('cancelDialog').onclick=close;
