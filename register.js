@@ -42,7 +42,7 @@
  }
  function today(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('-')}
  function uuid(){if(window.crypto?.randomUUID)return window.crypto.randomUUID();const bytes=window.crypto?.getRandomValues?window.crypto.getRandomValues(new Uint8Array(16)):Array.from({length:16},()=>Math.floor(Math.random()*256));return [...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
- function createId(){let id;do{id='EM-'+today().slice(0,4)+'-'+uuid().slice(0,8).toUpperCase()}while(rows.some(r=>r.id===id));return id}
+ function createId(){let id;do{id='R83-'+today().slice(0,4)+'-'+uuid().slice(0,8).toUpperCase()}while(rows.some(r=>r.id===id));return id}
  function newTest(){const id=createId();return normalize({id,date:today(),model:'',testStatus:'Draft',cells:{C5:id,C6:today()}})}
  function field(label,path,type='text',options='',section=-1,valueOverride){
   const value=valueOverride!==undefined?valueOverride:getPath(draft,path),editable=mode==='edit'||mode==='create',id='record-field-'+(++inputIndex);
