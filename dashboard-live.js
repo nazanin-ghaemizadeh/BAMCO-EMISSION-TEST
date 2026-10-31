@@ -10,7 +10,7 @@
  const $=id=>document.getElementById(id);
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const n=v=>v!==''&&v!=null&&Number.isFinite(Number(v))?Number(v):null;
- const fmt=(v,d=2)=>v==null?'Unknown':Number(v).toLocaleString('fa-IR',{maximumFractionDigits:d});
+ const fmt=(v,d=2)=>v==null?'Unknown':Number(v).toLocaleString('en-US',{maximumFractionDigits:d});
  const cell=(r,k)=>r.cells?.[k];
  const value=(r,...keys)=>{for(const k of keys){const v=k.startsWith('C')?cell(r,k):r[k];if(v!==undefined&&v!==null&&v!=='')return v}return ''};
  function phaseValue(r,p,phase='combined'){
