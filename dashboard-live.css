@@ -41,14 +41,8 @@
 }
 
 /* Three environmental charts in one horizontal row at desktop widths. */
-.environment-charts-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.environment-charts-grid{display:grid;grid-template-columns:1fr;gap:14px}
 .environment-charts-grid .dashboard-card{min-width:0}
 .environment-charts-grid .dashboard-card>.chart-box:has(#temperatureEnvironment),
 .environment-charts-grid .dashboard-card>.chart-box:has(#humidityEnvironment),
-.environment-charts-grid .dashboard-card>.chart-box:has(#pressureEnvironment){height:480px}
-@media(max-width:760px){
- .environment-charts-grid{grid-template-columns:1fr}
- .environment-charts-grid .dashboard-card>.chart-box:has(#temperatureEnvironment),
- .environment-charts-grid .dashboard-card>.chart-box:has(#humidityEnvironment),
- .environment-charts-grid .dashboard-card>.chart-box:has(#pressureEnvironment){height:400px}
-}
+.environment-charts-grid .dashboard-card>.chart-box:has(#pressureEnvironment){height:530px}
