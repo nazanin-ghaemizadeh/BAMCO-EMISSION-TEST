@@ -99,3 +99,10 @@ body.dialog-open{overflow:hidden}
 
 
 .test-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.test-toolbar .btn{white-space:nowrap}@media(max-width:760px){.workspace-nav{flex-wrap:wrap}.test-toolbar{width:100%;justify-content:flex-end}}
+
+/* Matching register toolbar actions. */
+.test-toolbar > button{display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;flex:0 0 152px;width:152px;height:46px;min-height:46px;margin:0;padding:10px 12px;border:1px solid #1c7058;border-radius:10px;background:#206c56;color:#fff;font-family:inherit;font-size:16px;font-weight:700;line-height:1.2;white-space:nowrap}
+.test-toolbar > button:hover{background:#165640;border-color:#165640}
+.test-toolbar > button:focus-visible{outline:3px solid #91d6ba;outline-offset:3px}
+.test-toolbar > button:disabled{opacity:.6;cursor:wait}
+@media(max-width:520px){.test-toolbar > button{flex:1 1 140px;width:152px}}
