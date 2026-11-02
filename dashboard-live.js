@@ -50,10 +50,10 @@
    card(11,'Mileage vs Pollutant','Scatter view; every point is an individual test.','mileageRelation',pollutantSelect('mileagePollutant',state.mileagePollutant))+
    card(12,'Temperature vs Pollutant','Mean Phase 1/2 ambient temperature versus the selected pollutant.','temperatureRelation',pollutantSelect('temperaturePollutant',state.temperaturePollutant))+
    '</div></section>'+
-  '<section class="dashboard-section"><h2 class="dashboard-section-title">Test Environment</h2><div class="dashboard-grid">'+
-   '<article class="dashboard-card wide"><div class="dashboard-card-head"><div><h3>Temperature</h3></div></div><div class="chart-box"><canvas id="temperatureEnvironment"></canvas></div></article>'+
-   '<article class="dashboard-card wide"><div class="dashboard-card-head"><div><h3>Absolute Humidity</h3></div></div><div class="chart-box"><canvas id="humidityEnvironment"></canvas></div></article>'+
-   '<article class="dashboard-card wide"><div class="dashboard-card-head"><div><h3>Barometric Pressure</h3></div></div><div class="chart-box"><canvas id="pressureEnvironment"></canvas></div></article></div></section>';
+  '<section class="dashboard-section"><h2 class="dashboard-section-title">Test Environment</h2><div class="environment-charts-grid">'+
+   '<article class="dashboard-card"><div class="dashboard-card-head"><div><h3>Temperature</h3></div></div><div class="chart-box"><canvas id="temperatureEnvironment"></canvas></div></article>'+
+   '<article class="dashboard-card"><div class="dashboard-card-head"><div><h3>Absolute Humidity</h3></div></div><div class="chart-box"><canvas id="humidityEnvironment"></canvas></div></article>'+
+   '<article class="dashboard-card"><div class="dashboard-card-head"><div><h3>Barometric Pressure</h3></div></div><div class="chart-box"><canvas id="pressureEnvironment"></canvas></div></article></div></section>';
  }
  function render(){
   const root=$('dashboardPanel');if(!root)return;clearCharts();const list=filtered();
@@ -82,7 +82,7 @@
   const valid=datasets.some(d=>Array.isArray(d.data)&&d.data.some(v=>v!=null&&(typeof v!=='object'||(v.x!=null&&v.y!=null))));if(!valid)return emptyCanvas(id);
   if(!window.Chart)return emptyCanvas(id,'Chart library failed to load; please refresh.');
   const scales=extra.scales||{x:{grid:{display:false}},y:{beginAtZero:extra.beginAtZero!==false,title:{display:true,text:unit},grid:{color:'#e7eeea'}}};
-  if(type!=='scatter'){scales.x??={};scales.x.ticks={...(scales.x.ticks||{}),minRotation:40,maxRotation:40,autoSkip:false}}const font={family:'Times New Roman',size:12};for(const axis of Object.values(scales)){if(!axis||typeof axis!=='object')continue;axis.ticks={...(axis.ticks||{}),font};axis.title={...(axis.title||{}),font}}
+  if(type!=='scatter'){scales.x??={};scales.x.ticks={...(scales.x.ticks||{}),minRotation:12,maxRotation:12,autoSkip:false}}const font={family:'Times New Roman',size:12};for(const axis of Object.values(scales)){if(!axis||typeof axis!=='object')continue;axis.ticks={...(axis.ticks||{}),font};axis.title={...(axis.title||{}),font}}
   const chart=new Chart($(id),{type,data:{labels,datasets:datasets.map((d,i)=>({borderWidth:2,tension:.22,pointRadius:type==='scatter'?4:3,backgroundColor:d.backgroundColor||COLORS[i%COLORS.length],borderColor:d.borderColor||COLORS[i%COLORS.length],...d}))},options:{responsive:true,maintainAspectRatio:false,animation:false,devicePixelRatio:Math.min(window.devicePixelRatio||1,1.5),interaction:{mode:type==='scatter'?'nearest':'index',intersect:false},plugins:{legend:{display:extra.showLegend!==false,position:'bottom',labels:{usePointStyle:true,boxWidth:8,font}},tooltip:{enabled:extra.showTooltip!==false,backgroundColor:'#173b38',padding:11,cornerRadius:8,titleFont:font,bodyFont:font,callbacks:{label:c=>{const y=typeof c.parsed==='object'?c.parsed.y:c.parsed,meta=c.dataset.meta?.[c.dataIndex],lines=[c.dataset.label+': '+fmt(y,5)+(unit?' '+unit:'')];if(meta?.id)lines.push('Test ID: '+meta.id);if(meta?.vehicle)lines.push('Vehicle: '+meta.vehicle);if(meta?.category)lines.push('Category: '+meta.category);if(meta?.limit!=null)lines.push('Limit: '+fmt(meta.limit,4)+' g/km');return lines}}}},scales,...extra.options},plugins:extra.plugins||[]});charts.push(chart);return chart;
  }
  function meta(r,p){return {id:r.id,vehicle:r.model,category:r.category,limit:limitValue(r,p)}}
@@ -113,7 +113,7 @@
     {label:'Phase 1',data:first,borderColor:'#206c56',backgroundColor:'#206c56',pointRadius:4,tension:0},
     {label:'Phase 2',data:second,borderColor:'#4f82a5',backgroundColor:'#4f82a5',pointRadius:4,tension:0}
   ],unit,{scales:{
-    x:{offset:true,grid:{display:false},ticks:{minRotation:40,maxRotation:40,autoSkip:false}},
+    x:{offset:true,grid:{display:false},ticks:{minRotation:12,maxRotation:12,autoSkip:false}},
     y:{beginAtZero:false,suggestedMin:min-padding,suggestedMax:max+padding,title:{display:true,text:unit},grid:{color:'#e7eeea'}}
   },plugins:[]});
 }
