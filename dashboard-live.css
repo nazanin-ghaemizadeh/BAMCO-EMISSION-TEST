@@ -24,3 +24,18 @@
 @media(max-width:1100px){.dashboard-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-filter-actions{justify-content:flex-start}.dashboard-kpis{grid-template-columns:repeat(3,1fr)}.dashboard-unit-grid{grid-template-columns:1fr}.dashboard-unit-chart .chart-box{height:330px}.analytics-point-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.dashboard-filter-grid{grid-template-columns:1fr}.dashboard-kpis{grid-template-columns:repeat(2,1fr)}.dashboard-grid{grid-template-columns:1fr}.dashboard-card.wide{grid-column:auto}.dashboard-card{padding:13px}.dashboard-card-head{flex-direction:column}.dashboard-card-actions{width:100%;justify-content:flex-start}.dashboard-card>.chart-box,.dashboard-card.wide>.chart-box{height:320px}.dashboard-card .chart-box:has(#phaseAverage){height:360px}.vehicle-options{position:static;margin-top:7px}.analytics-point-grid{grid-template-columns:1fr}.dashboard-heatmap td{min-width:105px}}
 @media(max-width:460px){.dashboard-kpis{grid-template-columns:1fr}.dashboard-filter-actions{flex-wrap:wrap}.dashboard-card>.chart-box,.dashboard-card.wide>.chart-box{height:245px}.chart-control{width:100%}.chart-control select{min-width:0}.dashboard-export{align-self:flex-end}}
+
+/* Give the three full-width environmental trend charts additional vertical room. */
+.dashboard-card>.chart-box:has(#temperatureEnvironment),
+.dashboard-card>.chart-box:has(#humidityEnvironment),
+.dashboard-card>.chart-box:has(#pressureEnvironment){height:530px}
+@media(max-width:760px){
+ .dashboard-card>.chart-box:has(#temperatureEnvironment),
+ .dashboard-card>.chart-box:has(#humidityEnvironment),
+ .dashboard-card>.chart-box:has(#pressureEnvironment){height:440px}
+}
+@media(max-width:460px){
+ .dashboard-card>.chart-box:has(#temperatureEnvironment),
+ .dashboard-card>.chart-box:has(#humidityEnvironment),
+ .dashboard-card>.chart-box:has(#pressureEnvironment){height:380px}
+}
