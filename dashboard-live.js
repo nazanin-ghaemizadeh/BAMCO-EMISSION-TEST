@@ -8,7 +8,7 @@
  const CATEGORY_LIMITS={M1:{CO:1,THC:.1,NMHC:.068,NOx:.06},N1:{CO:2.27,THC:.16,NMHC:.108,NOx:.082}};
  const COLORS=['#206c56','#4f82a5','#d28743','#936db0','#c45d70','#329b94','#8c7b31','#60758a'];
  const PHASE_COLORS={p1:'#24866a',p2:'#397fb5',combined:'#d27a2c',average:'#8464a6'};
- const state={rows:[],vehicles:new Set(),from:'',to:'',phasePollutant:'CO',averagePollutant:'CO',trendPollutant:'CO',mileagePollutant:'NOx',temperaturePollutant:'NOx',ecuPollutant:'ALL',forecast:'regression',loaded:false,preview:false};
+ const state={rows:[],vehicles:new Set(),from:'',to:'',phasePollutant:'CO',averagePollutant:'CO',trendPollutant:'CO',mileagePollutant:'CO',temperaturePollutant:'NOx',ecuPollutant:'ALL',forecast:'regression',loaded:false,preview:false};
  const charts=[];
  const $=id=>document.getElementById(id);
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
