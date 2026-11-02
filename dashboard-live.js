@@ -110,8 +110,8 @@
   const spread=Math.max(max-min,unit==='°C'?2:unit==='kPa'?5:1);
   const padding=spread*.6;
   make(id,'line',list.map(r=>r.id),[
-    {label:'Phase 1',data:first,borderColor:'#206c56',backgroundColor:'#206c56',pointRadius:4,tension:0},
-    {label:'Phase 2',data:second,borderColor:'#4f82a5',backgroundColor:'#4f82a5',pointRadius:4,tension:0}
+    {label:'Phase 1',data:first,borderColor:'#206c56',backgroundColor:'#206c56',pointRadius:4,tension:0.35},
+    {label:'Phase 2',data:second,borderColor:'#4f82a5',backgroundColor:'#4f82a5',pointRadius:4,tension:0.35}
   ],unit,{scales:{
     x:{offset:true,grid:{display:false},ticks:{minRotation:12,maxRotation:12,autoSkip:false}},
     y:{beginAtZero:false,suggestedMin:min-padding,suggestedMax:max+padding,title:{display:true,text:unit},grid:{color:'#e7eeea'}}
