@@ -45,11 +45,13 @@
  }
  function statusHTML(r){const s=result(r);return s==='Pass'||s==='Fail'?'<span class="status-face '+s.toLowerCase()+'" role="img" aria-label="'+(s==='Pass'?'Pass · green smiling face':'Fail · red crying face')+'" title="'+esc(s)+'">'+FACES[s]+'<span>'+s+'</span></span>':'<span class="pending-status">Not assessed</span>'}
  function render(){
+  rows.sort((a,b)=>dateSortKey(b.date)-dateSortKey(a.date)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))); 
   $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'">Edit</button><button class="row-action excel" data-action="excel" data-id="'+esc(r.id)+'">Excel</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'">Delete</button></div></td></tr>').join(''):(connected?'<tr><td colspan="5" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>':'<tr><td colspan="5" class="empty-table">Connecting to the central database… Records are not available until the connection is confirmed.</td></tr>');
   $('createTest').disabled=false;if(storageError)$('pageNotice').textContent=storageError;
  }
  function latinDigits(value){return String(value??'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)))}
  function solarDate(value){const text=latinDigits(value).trim(),match=text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);if(!match)return text;if(Number(match[1])<1700)return match[1]+'/'+match[2].padStart(2,'0')+'/'+match[3].padStart(2,'0');const date=new Date(Date.UTC(+match[1],+match[2]-1,+match[3],12));const parts=new Intl.DateTimeFormat('en-US-u-ca-persian',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('/');}
+ function dateSortKey(value){const m=solarDate(value).match(/^(\d{4})\/(\d{2})\/(\d{2})$/);return m?Number(m.slice(1).join('')):0}
  function today(){const parts=new Intl.DateTimeFormat('en-US-u-ca-persian',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('/')}
 
  function uuid(){if(window.crypto?.randomUUID)return window.crypto.randomUUID();const bytes=window.crypto?.getRandomValues?window.crypto.getRandomValues(new Uint8Array(16)):Array.from({length:16},()=>Math.floor(Math.random()*256));return [...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -162,5 +164,19 @@
  setInterval(()=>{if(connected&&!draft&&!saving&&document.visibilityState==='visible')refreshCentral().catch(error=>{$('pageNotice').textContent='Refresh failed: '+error.message})},30000);
  // Pure record-result logic for validation without modifying saved records.
  window.EmissionRegisterMath={result,corrected};
+ window.EmissionImportRecord=async record=>{
+  if(saving)throw Error('Another test is being saved. Please try again.');
+  if(!connected||!central.ready()){central.ask();throw Error('Open Emission Test from Task Management after signing in.');}
+  const r=normalize(clone(record)),id=String(r.id||'').trim();
+  if(!id||id.length>128||id.includes('/'))throw Error('Enter a unique test ID of up to 128 characters, without a slash.');
+  if(!dateSortKey(r.date))throw Error('Enter the test date as YYYY/MM/DD (Solar Hijri) or YYYY-MM-DD (Gregorian).');
+  r.id=id;r.cells.C5=id;r.cells.C6=r.date;r.updatedAt=new Date().toISOString();
+  r.history=[{at:r.updatedAt,actor:central.user().id,action:'Excel import'}];
+  saving=true;
+  try{await refreshCentral();if(rows.some(x=>x.id===id))throw Error('Test ID '+id+' already exists. No existing test was changed.');
+   await saveCentral(r,true);rows.push(r);render();window.dispatchEvent(new CustomEvent('bamco:emission-tests-updated',{detail:{id}}));return id;
+  }finally{saving=false;}
+ };
  window.EmissionCentralRecords=()=>connected?rows.map(clone):[];
 }());
+

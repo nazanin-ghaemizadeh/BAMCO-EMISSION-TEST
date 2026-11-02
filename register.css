@@ -96,3 +96,6 @@ body.dialog-open{overflow:hidden}
 .register-table th,.register-table td{padding:17px 20px;overflow-wrap:anywhere;vertical-align:middle}
 .register-table td:last-child,.register-table th:last-child{min-width:0}.register-table .row-actions{flex-wrap:wrap}
 @media(max-width:700px){.app-shell{padding:16px 12px}.register-table{min-width:700px}.register-table th,.register-table td{padding:12px 10px}}
+
+
+.test-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.test-toolbar .btn{white-space:nowrap}@media(max-width:760px){.workspace-nav{flex-wrap:wrap}.test-toolbar{width:100%;justify-content:flex-end}}
