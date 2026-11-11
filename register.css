@@ -91,11 +91,12 @@ body.dialog-open{overflow:hidden}
 
 .app-shell{max-width:none;width:100%;margin:0;padding:30px 2.5vw 36px}
 .register-panel,.table-scroll{width:100%;max-width:none}
-.register-table{width:100%;min-width:0;table-layout:fixed}
-.register-table col.col-id{width:23%}.register-table col.col-date{width:15%}.register-table col.col-vehicle{width:27%}.register-table col.col-status{width:13%}.register-table col.col-action{width:22%}
+.register-table{width:100%;min-width:920px;table-layout:fixed}
+.register-table col.col-id{width:20%}.register-table col.col-date{width:12%}.register-table col.col-vehicle{width:16%}.register-table col.col-vin{width:24%}.register-table col.col-status{width:10%}.register-table col.col-action{width:18%}
+.register-table .vin-cell{direction:ltr;white-space:nowrap;font-variant-numeric:tabular-nums}
 .register-table th,.register-table td{padding:17px 20px;overflow-wrap:anywhere;vertical-align:middle}
 .register-table td:last-child,.register-table th:last-child{min-width:0}.register-table .row-actions{flex-wrap:wrap}
-@media(max-width:700px){.app-shell{padding:16px 12px}.register-table{min-width:700px}.register-table th,.register-table td{padding:12px 10px}}
+@media(max-width:700px){.app-shell{padding:16px 12px}.register-table{min-width:920px}.register-table th,.register-table td{padding:12px 10px}}
 
 
 .test-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.test-toolbar .btn{white-space:nowrap}@media(max-width:760px){.workspace-nav{flex-wrap:wrap}.test-toolbar{width:100%;justify-content:flex-end}}
