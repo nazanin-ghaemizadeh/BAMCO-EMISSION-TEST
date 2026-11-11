@@ -11,7 +11,8 @@
   Fail:'<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#ffe7e7" stroke="#c34648" stroke-width="2"/><path d="M11 15 L16 16 M24 16 L29 15" fill="none" stroke="#c34648" stroke-width="2" stroke-linecap="round"/><circle cx="14" cy="18.5" r="1.5" fill="#c34648"/><circle cx="26" cy="18.5" r="1.5" fill="#c34648"/><path d="M13 29 Q20 21 27 29" fill="none" stroke="#c34648" stroke-width="2" stroke-linecap="round"/><path d="M29 20 Q25 26 29 27.5 Q33 26 29 20" fill="#d2575b"/></svg>'
  };
  const central=window.BamcoCentral;let connected=false,revisions={};
- let rows=[],draft=null,original=null,cleanDraft=null,mode='open',pendingFiles=[],inputIndex=0,storageError='',saving=false,lastTrigger=null;
+ let rows=[],draft=null,original=null,cleanDraft=null,mode='open',pendingFiles=[],inputIndex=0,storageError='',saving=false,lastTrigger=null,autoFilled={};
+ const references=()=>window.EmissionVehicleDefaults.build(rows);
  function normalize(r){r.cells??={};r.id=r.cells.C5||r.id;r.date=solarDate(r.cells.C6||r.date);if(r.cells.C6)r.cells.C6=r.date;r.model=r.cells.C15||r.model;r.results??={};r.attachments??=[];r.history??=[];r.phaseData??={};r.limits??={};r.resultUnits??={};r.limitsUnits??={};return r}
  function combinedCO2(r){const direct=number(r?.results?.CO2?.combined),worksheet=number(r?.cells?.E103);return direct??worksheet??null}
  function runningMass(r){const current=number(r?.cells?.C110),legacy=number(r?.cells?.C90),co2=combinedCO2(r);if(legacy>0&&current>0&&co2!=null&&Math.abs(current-co2)<0.01)return legacy;return current>0?current:legacy>0?legacy:null}
@@ -26,7 +27,7 @@
   }catch(e){storageError='Saved tests could not be read. The original data has been kept unchanged. '+e.message;return null}
  }
  function persist(data){/* Legacy device data remains untouched; confirmed records live in the database. */}
- async function refreshCentral(){const records=await central.all('emission_tests');revisions=Object.fromEntries(records.map(r=>[r.id,r.revision]));rows=records.map(r=>normalize(r.data));connected=true;storageError='';render();$('pageNotice').textContent='';}
+ async function refreshCentral(){const records=await central.all('emission_tests');revisions=Object.fromEntries(records.map(r=>[r.id,r.revision]));rows=records.map(r=>normalize(r.data));connected=true;storageError='';render();refreshReferenceOptions();$('pageNotice').textContent='';}
  async function saveCentral(record,isNew){if(!connected||!central.ready())throw Error('Central connection is unavailable. Reopen from Task Management.');const payload={data:record,updated_by:central.user().id};if(isNew){payload.id=record.id;payload.created_by=central.user().id;}const path='emission_tests'+(isNew?'':'?id=eq.'+encodeURIComponent(record.id)+'&revision=eq.'+revisions[record.id]);const result=await central.request(path,{method:isNew?'POST':'PATCH',body:payload,prefer:'return=representation'});if(!result?.length)throw Error('This test changed on another device or access was removed. Reopen the latest record.');revisions[record.id]=result[0].revision;}
 
  function stable(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return '['+value.map(stable).join(',')+']';return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}'}
@@ -59,6 +60,7 @@
  function newTest(){const id=createId();return normalize({id,date:today(),model:'',testStatus:'Draft',cells:{C5:id,C6:today()}})}
  function field(label,path,type='text',options='',section=-1,valueOverride){
   if(path==='cells.C6'){type='text';label='Date (Solar Hijri)';}
+  if(path==='cells.C9'){type='select';options=references().laboratories;}
   const value=path==='cells.C111'?massRatio(draft):valueOverride!==undefined?valueOverride:getPath(draft,path),editable=mode==='edit'||mode==='create',id='record-field-'+(++inputIndex);
   let cell;
   if(!editable||type==='computed')cell='<span class="field-value" '+(type==='computed'?'data-calculated="'+esc(path)+'"':'')+'>'+esc(display(value))+'</span>';
@@ -66,7 +68,7 @@
    const readOnly=path==='cells.C5'&&mode!=='create';
    const attrs=(path==='cells.C6'?' placeholder="1405/08/09" inputmode="numeric" pattern="[0-9۰-۹٠-٩]{4}/[0-9۰-۹٠-٩]{2}/[0-9۰-۹٠-٩]{2}" ':'')+' id="'+id+'" data-key="'+esc(path)+'" data-section="'+section+'" '+(readOnly?'readonly ':'')+(path==='cells.C5'?'required maxlength="128" ':'')+(path==='cyclePhaseCount'?'min="1" max="8" ':'');
    if(type==='select'){
-    const opts=options.split('|').filter(Boolean);if(value!=null&&value!==''&&!opts.includes(String(value)))opts.unshift(String(value));
+    const opts=Array.isArray(options)?[...options]:options.split('|').filter(Boolean);if(value!=null&&value!==''&&!opts.includes(String(value)))opts.unshift(String(value));
     cell='<select'+attrs+'><option value="">Select…</option>'+opts.map(v=>'<option value="'+esc(v)+'" '+(v===String(value)?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select>';
    }else if(type==='textarea'||(/notes|remarks|description|changes|cause|action|services|procedure|conditions|composition|purpose|configuration/i.test(label)&&type==='text')){
     cell='<textarea'+attrs+' rows="2">'+esc(value??'')+'</textarea>';
@@ -91,12 +93,33 @@
   inputIndex=0;
   $('dialogMode').textContent=mode==='create'?'CREATE TEST':mode==='delete'?'DELETE TEST':mode==='edit'?'EDIT TEST':'TEST DETAILS';
   $('dialogTitle').textContent=mode==='create'?'New emission test':draft.id;
-  $('dialogBody').innerHTML=GROUPS.map(([name,fields],section)=>'<section class="record-section" data-record-section="'+section+'"><h3>'+String(section+1).padStart(2,'0')+' · '+esc(name)+'</h3><table class="field-table"><colgroup><col class="field-label-col"><col class="field-value-col"></colgroup><tbody>'+fields.map(([key,label,type,opts])=>field(label,key,type||'text',opts||'',section)).join('')+'</tbody></table></section>').join('');
+  $('dialogBody').innerHTML=vehiclePicker()+GROUPS.map(([name,fields],section)=>'<section class="record-section" data-record-section="'+section+'"><h3>'+String(section+1).padStart(2,'0')+' · '+esc(name)+'</h3><table class="field-table"><colgroup><col class="field-label-col"><col class="field-value-col"></colgroup><tbody>'+fields.map(([key,label,type,opts])=>field(label,key,type||'text',opts||'',section)).join('')+'</tbody></table></section>').join('');
   $('saveRecord').hidden=!['edit','create'].includes(mode);$('editRecord').hidden=mode!=='open';$('confirmDelete').hidden=mode!=='delete';$('cancelDialog').textContent=['edit','create'].includes(mode)?'Cancel':'Close';
   $('dialogNotice').className='';
   $('dialogNotice').textContent=mode==='delete'?'Delete this test and remove it from the register?':mode==='create'?'':mode==='edit'?'Changes are applied when you select Save Test.':'';
  }
- function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();if(draft?.cells){const mass=runningMass(draft);if(mass>0)draft.cells.C110=mass;}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
+ function vehiclePicker(){
+  if(!['create','edit'].includes(mode))return '';
+  const models=references().models,current=String(draft.cells?.C15||draft.model||'').trim();if(current&&!models.includes(current))models.unshift(current);
+  return '<section class="vehicle-preset"><label for="vehiclePreset">Vehicle type</label><select id="vehiclePreset"><option value="">Select a vehicle…</option>'+models.map(model=>'<option value="'+esc(model)+'" '+(model===current?'selected':'')+'>'+esc(model)+'</option>').join('')+'</select><p class="field-hint">Select a saved vehicle to fill its shared specifications. All values remain editable; review fuel density for this test. For a new vehicle, enter its model below.</p><p id="vehiclePresetNotice" role="status" aria-live="polite"></p></section>';
+ }
+ function refreshReferenceOptions(){
+  if(!draft)return;const catalog=references();
+  for(const [select,values,placeholder] of [[$('vehiclePreset'),catalog.models,'Select a vehicle…'],[document.querySelector('#dialogBody select[data-key="cells.C9"]'),catalog.laboratories,'Select…']]){
+   if(!select)continue;const current=select.value;if(current&&!values.includes(current))values.unshift(current);
+   select.replaceChildren(new Option(placeholder,''),...values.map(value=>new Option(value,value)));select.value=current;
+  }
+ }
+ function applyVehicle(selected){
+  if(!selected||!draft)return;collect();
+  const preset=references().defaults(selected);draft.cells.C15=preset.model;draft.model=preset.model;
+  for(const [key,value] of Object.entries(autoFilled)){if(String(draft.cells[key]??'')===String(value))draft.cells[key]='';}
+  autoFilled={};let count=0;
+  for(const [key,value] of Object.entries(preset.cells)){if(String(draft.cells[key]??'').trim()===''){draft.cells[key]=clone(value);autoFilled[key]=clone(value);count++;}}
+  document.querySelectorAll('#dialogBody [data-key]').forEach(el=>{const value=getPath(draft,el.dataset.key);if(el.tagName==='SELECT'&&value!=null&&value!==''&&![...el.options].some(option=>option.value===String(value)))el.add(new Option(String(value),String(value)));el.value=value??'';});
+  refreshCalculations();$('vehiclePresetNotice').textContent=count+' shared fields filled. Existing entries were kept.'+(preset.conflicts?' Fields with different values in past tests were left for review.':'');
+ }
+ function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();autoFilled={};if(draft?.cells){const mass=runningMass(draft);if(mass>0)draft.cells.C110=mass;}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
  function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||'';const mass=runningMass(draft);draft.cells.C90=mass>0?mass:'';draft.cells.C111=massRatio(draft)}}
  function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(el.dataset.calculated==='cells.C111'?massRatio(draft):kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
@@ -151,6 +174,7 @@
  $('testForm').onsubmit=save;$('confirmDelete').onclick=remove;
  $('dialogBody').addEventListener('input',event=>{if(event.target.dataset.key){collectOne(event.target);refreshCalculations()}});
  $('dialogBody').addEventListener('change',event=>{
+  if(event.target.id==='vehiclePreset'){applyVehicle(event.target.value);return;}
   const input=event.target;if(input.dataset.key){collectOne(input);if(input.dataset.key==='cyclePhaseCount'||input.dataset.key==='cycle'){collect();const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}else refreshCalculations()}
   if(input.id==='recordAttachments'){const files=[...input.files];if(files.some(file=>file.size>52428800)){notice('Each attachment must be no larger than 50 MB.',true);input.value='';return}collect();pendingFiles.push(...files.map(file=>({id:uuid(),file})));const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}
  });
@@ -158,7 +182,8 @@
  window.addEventListener('storage',event=>{if(!connected&&event.key===KEY){const latest=getSaved();if(latest){rows=latest;render();if(draft&&original&&stable(rows.find(r=>r.id===original.id))!==stable(original))notice('This test changed in another window. Review the latest saved record before saving.',true)}}});
  window.addEventListener('beforeunload',event=>{if(dirty()){event.preventDefault();event.returnValue=''}});
  window.addEventListener('bamco:central-ready',()=>refreshCentral().catch(error=>{connected=false;storageError=error.message;render()}));
- window.addEventListener('bamco:central-locked',event=>{connected=false;rows=[];storageError=event.detail.message;render()});
+ window.addEventListener('bamco:central-reconnecting',event=>{connected=false;storageError=event.detail.message;render();if(draft)notice('Reconnecting to Task Management. Your unsaved form is kept here.');});
+ window.addEventListener('bamco:central-locked',event=>{connected=false;rows=[];storageError=event.detail.message;render();if(draft)finishClose();});
  $('pageNotice').textContent='';
  render();if(central.ready())refreshCentral().catch(error=>{storageError=error.message;render()});
  setInterval(()=>{if(connected&&!draft&&!saving&&document.visibilityState==='visible')refreshCentral().catch(error=>{$('pageNotice').textContent='Refresh failed: '+error.message})},30000);

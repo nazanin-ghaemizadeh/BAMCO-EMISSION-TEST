@@ -103,3 +103,5 @@ body.dialog-open{overflow:hidden}
 .test-toolbar > button:focus-visible{outline:3px solid #91d6ba;outline-offset:3px}
 .test-toolbar > button:disabled{opacity:.6;cursor:wait}
 @media(max-width:520px){.test-toolbar > button{flex:1 1 140px;width:152px}}
+
+.vehicle-preset{margin:20px 0;padding:16px;border:1px solid #cfe2d7;border-radius:10px;background:#f1f8f4}.vehicle-preset label{display:block;font-weight:700;margin-bottom:8px}.vehicle-preset select{width:100%;max-width:460px;padding:10px;border:1px solid #b9d3c4;border-radius:7px;background:#fff;color:var(--ink)}#vehiclePresetNotice{margin:8px 0 0;font-size:14px;color:#235a43}
