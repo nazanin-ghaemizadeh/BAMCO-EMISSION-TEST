@@ -105,3 +105,5 @@ body.dialog-open{overflow:hidden}
 @media(max-width:520px){.test-toolbar > button{flex:1 1 140px;width:152px}}
 
 .vehicle-preset{margin:20px 0;padding:16px;border:1px solid #cfe2d7;border-radius:10px;background:#f1f8f4}.vehicle-preset label{display:block;font-weight:700;margin-bottom:8px}.vehicle-preset select{width:100%;max-width:460px;padding:10px;border:1px solid #b9d3c4;border-radius:7px;background:#fff;color:var(--ink)}#vehiclePresetNotice{margin:8px 0 0;font-size:14px;color:#235a43}
+
+.preset-sources{margin-top:12px;font-size:13px}.preset-sources summary{cursor:pointer;font-weight:700;color:#235a43}.preset-sources>div{overflow:auto;margin-top:10px}.preset-sources table{width:100%;border-collapse:collapse;text-align:left}.preset-sources th,.preset-sources td{padding:8px;border-bottom:1px solid #cfe2d7;vertical-align:top;overflow-wrap:anywhere}.preset-sources th{font-weight:700}.dialog-body:focus-visible{outline:2px solid #267958;outline-offset:-3px}

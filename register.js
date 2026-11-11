@@ -27,7 +27,7 @@
   }catch(e){storageError='Saved tests could not be read. The original data has been kept unchanged. '+e.message;return null}
  }
  function persist(data){/* Legacy device data remains untouched; confirmed records live in the database. */}
- async function refreshCentral(){const records=await central.all('emission_tests');revisions=Object.fromEntries(records.map(r=>[r.id,r.revision]));rows=records.map(r=>normalize(r.data));connected=true;storageError='';render();refreshReferenceOptions();$('pageNotice').textContent='';}
+ async function refreshCentral(){const records=await central.all('emission_tests');revisions=Object.fromEntries(records.map(r=>[r.id,r.revision]));rows=records.map(r=>normalize({...r.data,updatedAt:r.updated_at||r.data.updatedAt}));connected=true;storageError='';render();refreshReferenceOptions();$('pageNotice').textContent='';}
  async function saveCentral(record,isNew){if(!connected||!central.ready())throw Error('Central connection is unavailable. Reopen from Task Management.');const payload={data:record,updated_by:central.user().id};if(isNew){payload.id=record.id;payload.created_by=central.user().id;}const path='emission_tests'+(isNew?'':'?id=eq.'+encodeURIComponent(record.id)+'&revision=eq.'+revisions[record.id]);const result=await central.request(path,{method:isNew?'POST':'PATCH',body:payload,prefer:'return=representation'});if(!result?.length)throw Error('This test changed on another device or access was removed. Reopen the latest record.');revisions[record.id]=result[0].revision;}
 
  function stable(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return '['+value.map(stable).join(',')+']';return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}'}
@@ -67,7 +67,9 @@
   else{
    const readOnly=path==='cells.C5'&&mode!=='create';
    const attrs=(path==='cells.C6'?' placeholder="1405/08/09" inputmode="numeric" pattern="[0-9۰-۹٠-٩]{4}/[0-9۰-۹٠-٩]{2}/[0-9۰-۹٠-٩]{2}" ':'')+' id="'+id+'" data-key="'+esc(path)+'" data-section="'+section+'" '+(readOnly?'readonly ':'')+(path==='cells.C5'?'required maxlength="128" ':'')+(path==='cyclePhaseCount'?'min="1" max="8" ':'');
-   if(type==='select'){
+   if(path==='cells.C9'){
+    cell='<select'+attrs+'>'+laboratoryOptions(value)+'</select>';
+   }else if(type==='select'){
     const opts=Array.isArray(options)?[...options]:options.split('|').filter(Boolean);if(value!=null&&value!==''&&!opts.includes(String(value)))opts.unshift(String(value));
     cell='<select'+attrs+'><option value="">Select…</option>'+opts.map(v=>'<option value="'+esc(v)+'" '+(v===String(value)?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select>';
    }else if(type==='textarea'||(/notes|remarks|description|changes|cause|action|services|procedure|conditions|composition|purpose|configuration/i.test(label)&&type==='text')){
@@ -75,6 +77,11 @@
    }else cell='<input'+attrs+' type="'+type+'" '+(type==='number'?'step="any" ':'')+'value="'+esc(value??'')+'">';
   }
   return '<tr><th scope="row">'+(editable&&type!=='computed'?'<label for="'+id+'">'+esc(label)+'</label>':esc(label))+'</th><td>'+cell+'</td></tr>';
+ }
+ function laboratoryOptions(value){
+  const current=window.EmissionVehicleDefaults.laboratory(value),options=references().laboratories;
+  if(current&&!options.some(option=>option.value===current))options.unshift({value:current,label:current});
+  return '<option value="">Select a laboratory…</option>'+options.map(option=>'<option value="'+esc(option.value)+'" '+(option.value===current?'selected':'')+'>'+esc(option.label)+'</option>').join('');
  }
  function subheading(label){return '<tr class="subsection-row"><th colspan="2">'+esc(label)+'</th></tr>'}
  function extraRows(section){
@@ -101,25 +108,29 @@
  function vehiclePicker(){
   if(!['create','edit'].includes(mode))return '';
   const models=references().models,current=String(draft.cells?.C15||draft.model||'').trim();if(current&&!models.includes(current))models.unshift(current);
-  return '<section class="vehicle-preset"><label for="vehiclePreset">Vehicle type</label><select id="vehiclePreset"><option value="">Select a vehicle…</option>'+models.map(model=>'<option value="'+esc(model)+'" '+(model===current?'selected':'')+'>'+esc(model)+'</option>').join('')+'</select><p class="field-hint">Select a saved vehicle to fill its shared specifications. All values remain editable; review fuel density for this test. For a new vehicle, enter its model below.</p><p id="vehiclePresetNotice" role="status" aria-live="polite"></p></section>';
+  return '<section class="vehicle-preset"><label for="vehiclePreset">Vehicle type</label><select id="vehiclePreset"><option value="">Select a vehicle…</option>'+models.map(model=>'<option value="'+esc(model)+'" '+(model===current?'selected':'')+'>'+esc(model)+'</option>').join('')+'</select><p class="field-hint">Fill specifications and test settings from the latest saved tests of this vehicle. Empty fields use the most recent available value. Review and edit the copied values for this test. For a new vehicle, enter its model below.</p><p id="vehiclePresetNotice" role="status" aria-live="polite"></p><details id="vehiclePresetSources" class="preset-sources" hidden><summary>View copied fields and source tests</summary><div></div></details></section>';
  }
  function refreshReferenceOptions(){
   if(!draft)return;const catalog=references();
-  for(const [select,values,placeholder] of [[$('vehiclePreset'),catalog.models,'Select a vehicle…'],[document.querySelector('#dialogBody select[data-key="cells.C9"]'),catalog.laboratories,'Select…']]){
+  for(const [select,values,placeholder] of [[$('vehiclePreset'),catalog.models,'Select a vehicle…']]){
    if(!select)continue;const current=select.value;if(current&&!values.includes(current))values.unshift(current);
    select.replaceChildren(new Option(placeholder,''),...values.map(value=>new Option(value,value)));select.value=current;
   }
+  const lab=document.querySelector('#dialogBody select[data-key="cells.C9"]');if(lab)lab.innerHTML=laboratoryOptions(lab.value);
  }
  function applyVehicle(selected){
   if(!selected||!draft)return;collect();
   const preset=references().defaults(selected);draft.cells.C15=preset.model;draft.model=preset.model;
-  for(const [key,value] of Object.entries(autoFilled)){if(String(draft.cells[key]??'')===String(value))draft.cells[key]='';}
-  autoFilled={};let count=0;
-  for(const [key,value] of Object.entries(preset.cells)){if(String(draft.cells[key]??'').trim()===''){draft.cells[key]=clone(value);autoFilled[key]=clone(value);count++;}}
+  for(const [key,value] of Object.entries(autoFilled)){if(String(draft.cells[key]??'')===String(value)){draft.cells[key]='';if(key==='C110')draft.cells.C90='';}}
+  autoFilled={};const copied=[];
+  for(const [key,value] of Object.entries(preset.cells)){if(String(draft.cells[key]??'').trim()===''){draft.cells[key]=clone(value);autoFilled[key]=clone(value);copied.push(key);}}
   document.querySelectorAll('#dialogBody [data-key]').forEach(el=>{const value=getPath(draft,el.dataset.key);if(el.tagName==='SELECT'&&value!=null&&value!==''&&![...el.options].some(option=>option.value===String(value)))el.add(new Option(String(value),String(value)));el.value=value??'';});
-  refreshCalculations();$('vehiclePresetNotice').textContent=count+' shared fields filled. Existing entries were kept.'+(preset.conflicts?' Fields with different values in past tests were left for review.':'');
+  refreshCalculations();$('vehiclePresetNotice').textContent=copied.length+' fields filled from previous '+preset.model+' tests. Your existing entries were kept. All copied values can be edited.';
+  const sources=$('vehiclePresetSources'),labels=Object.fromEntries(GROUPS.flatMap(([,fields])=>fields.map(([path,label])=>[path,label])));sources.hidden=!copied.length;
+  sources.querySelector('div').innerHTML='<table><thead><tr><th>Field</th><th>Copied value</th><th>Source test · date</th></tr></thead><tbody>'+copied.map(key=>'<tr><td>'+esc(labels['cells.'+key]||key)+'</td><td>'+esc(preset.cells[key])+'</td><td>'+esc(preset.sources[key].id)+' · '+esc(preset.sources[key].date)+'</td></tr>').join('')+'</tbody></table>';
+  $('dialogBody').focus({preventScroll:true});
  }
- function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();autoFilled={};if(draft?.cells){const mass=runningMass(draft);if(mass>0)draft.cells.C110=mass;}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');}
+ function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();autoFilled={};if(draft?.cells){const mass=runningMass(draft);if(mass>0)draft.cells.C110=mass;}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');$('dialogBody').focus({preventScroll:true});}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
  function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||'';const mass=runningMass(draft);draft.cells.C90=mass>0?mass:'';draft.cells.C111=massRatio(draft)}}
  function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(el.dataset.calculated==='cells.C111'?massRatio(draft):kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
@@ -175,7 +186,7 @@
  $('dialogBody').addEventListener('input',event=>{if(event.target.dataset.key){collectOne(event.target);refreshCalculations()}});
  $('dialogBody').addEventListener('change',event=>{
   if(event.target.id==='vehiclePreset'){applyVehicle(event.target.value);return;}
-  const input=event.target;if(input.dataset.key){collectOne(input);if(input.dataset.key==='cyclePhaseCount'||input.dataset.key==='cycle'){collect();const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}else refreshCalculations()}
+  const input=event.target;if(input.dataset.key==='cells.C9')$('dialogBody').focus({preventScroll:true});if(input.dataset.key){collectOne(input);if(input.dataset.key==='cyclePhaseCount'||input.dataset.key==='cycle'){collect();const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}else refreshCalculations()}
   if(input.id==='recordAttachments'){const files=[...input.files];if(files.some(file=>file.size>52428800)){notice('Each attachment must be no larger than 50 MB.',true);input.value='';return}collect();pendingFiles.push(...files.map(file=>({id:uuid(),file})));const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}
  });
  $('dialogBody').addEventListener('click',event=>{const button=event.target.closest('[data-download]');if(button)downloadFile(button.dataset.download)});
