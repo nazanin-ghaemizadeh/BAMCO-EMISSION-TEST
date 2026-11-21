@@ -24,8 +24,7 @@ button{cursor:pointer}
 .register-table th{background:#f0f6f2;color:#4b6d61;font-weight:700;font-size:14px;text-align:left;padding:17px 16px;border-bottom:1px solid #d8e6dc;line-height:1.4}
 .register-table td{padding:18px 16px;border-bottom:1px solid #e4ece7;vertical-align:middle;font-size:15px;text-align:left;overflow-wrap:anywhere;line-height:1.5}
 .register-table tr:last-child td{border-bottom:0}.register-table tbody tr:hover{background:#f7fbf8}
-.register-table td:first-child{font-weight:700;font-variant-numeric:tabular-nums;color:#245b49}
-.register-table th:nth-child(6),.register-table td:nth-child(6){text-align:center}
+.register-table .test-id{font-weight:700;font-variant-numeric:tabular-nums;color:#245b49}
 .repeat-number{display:block;font-weight:700}.original-id{display:block;font-size:13px;color:#71867a}
 .status-face{display:inline-flex;flex-direction:column;align-items:center;gap:4px;line-height:1.1;font-size:12px;font-weight:700}
 .status-face svg{width:36px;height:36px;display:block}.status-face.pass{color:#18804e}.status-face.fail{color:#c34648}
@@ -85,8 +84,10 @@ body.dialog-open{overflow:hidden}
 .app-shell{max-width:none;width:100%;margin:0;padding:30px 2.5vw 36px}
 .register-panel,.table-scroll{width:100%;max-width:none}
 /* Equal column spacing with all four actions kept together. */
-.register-table{width:100%;min-width:1248px;table-layout:fixed}
-.register-table col{width:calc(100% / 6)}
+.register-table{width:100%;min-width:1308px;table-layout:fixed}
+.register-table col{width:calc((100% - 60px) / 6)}
+.register-table .col-no{width:60px}
+.register-table td:first-child{font-variant-numeric:tabular-nums}
 .register-table .vin-cell{direction:ltr;white-space:nowrap;font-variant-numeric:tabular-nums}
 .register-table th,.register-table td{padding:17px 12px;text-align:center;overflow-wrap:anywhere;vertical-align:middle}
 .register-table td{font-size:14px}

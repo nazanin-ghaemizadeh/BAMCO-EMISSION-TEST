@@ -46,8 +46,14 @@
  }
  function statusHTML(r){const s=result(r);return s==='Pass'||s==='Fail'?'<span class="status-face '+s.toLowerCase()+'" role="img" aria-label="'+(s==='Pass'?'Pass · green smiling face':'Fail · red crying face')+'" title="'+esc(s)+'">'+FACES[s]+'<span>'+s+'</span></span>':'<span class="pending-status">Not assessed</span>'}
  function render(){
-  rows.sort((a,b)=>dateSortKey(b.date)-dateSortKey(a.date)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))); 
-  $('testRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td class="vin-cell">'+esc(String(r.cells?.C17??r.vin??'').trim()||'—')+'</td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'">Edit</button><button class="row-action excel" data-action="excel" data-id="'+esc(r.id)+'">Excel</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'">Delete</button></div></td></tr>').join(''):(connected?'<tr><td colspan="6" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>':'<tr><td colspan="6" class="empty-table">Connecting to the central database… Records are not available until the connection is confirmed.</td></tr>');
+  const ordered=rows.map(record=>({record,dateKey:dateSortKey(record.date)}));
+  ordered.sort((a,b)=>b.dateKey-a.dateKey||String(b.record.id).localeCompare(String(a.record.id),'en'));
+  const datedCount=ordered.filter(entry=>entry.dateKey>0).length;
+  $('testRows').innerHTML=ordered.length?ordered.map(({record:r},index)=>{
+   // Dated tests are displayed newest first. Undated tests follow all dated numbers.
+   const rowNumber=index<datedCount?datedCount-index:index+1;
+   return '<tr><td>'+rowNumber+'</td><td class="test-id">'+esc(r.id)+'</td><td>'+esc(display(r.date))+'</td><td>'+esc(display(r.model))+'</td><td class="vin-cell">'+esc(String(r.cells?.C17??r.vin??'').trim()||'—')+'</td><td>'+statusHTML(r)+'</td><td><div class="row-actions"><button class="row-action open" data-action="open" data-id="'+esc(r.id)+'">Open</button><button class="row-action" data-action="edit" data-id="'+esc(r.id)+'">Edit</button><button class="row-action excel" data-action="excel" data-id="'+esc(r.id)+'">Excel</button><button class="row-action delete" data-action="delete" data-id="'+esc(r.id)+'">Delete</button></div></td></tr>';
+  }).join(''):(connected?'<tr><td colspan="7" class="empty-table">No tests recorded. Select Create Test to add a test.</td></tr>':'<tr><td colspan="7" class="empty-table">Connecting to the central database… Records are not available until the connection is confirmed.</td></tr>');
   $('createTest').disabled=false;if(storageError)$('pageNotice').textContent=storageError;
  }
  function latinDigits(value){return String(value??'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)))}

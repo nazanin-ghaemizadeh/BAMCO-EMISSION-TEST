@@ -55,3 +55,30 @@ test('arrow keys scroll from single-line fields without changing values, while m
  field.dispatchEvent(new w.KeyboardEvent('keydown',{key:'PageDown',bubbles:true,cancelable:true}));assert.deepEqual(calls,[64,64,480]);
  field.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true,cancelable:true}));assert.deepEqual(calls,[64,64,480,-64]);
 });
+test('register numbers follow the test date after import, edit, deletion and refresh',async t=>{
+ const records=[
+  {id:'late',date:'1405/02/10'},
+  {id:'early',cells:{C6:'۱۴۰۵/۰۱/۰۱'}},
+  {id:'undated'}
+ ];
+ const dom=await setup(records);t.after(()=>dom.window.close());
+ const w=dom.window,d=w.document;
+ const numberedRows=()=>[...d.querySelectorAll('#testRows tr')].map(tr=>[Number(tr.cells[0].textContent),tr.cells[1].textContent]);
+ assert.deepEqual([...d.querySelectorAll('.register-table th')].slice(0,2).map(th=>th.textContent),['NO.','Test ID']);
+ assert.deepEqual(numberedRows(),[[2,'late'],[1,'early'],[3,'undated']]);
+
+ await w.EmissionImportRecord({id:'middle',cells:{C6:'1405/01/15'}});
+ assert.deepEqual(numberedRows(),[[3,'late'],[2,'middle'],[1,'early'],[4,'undated']]);
+ d.querySelector('[data-action="edit"][data-id="late"]').click();
+ d.querySelector('[data-key="cells.C6"]').value='1404/12/01';
+ await d.getElementById('testForm').onsubmit({preventDefault(){}});
+ assert.deepEqual(numberedRows(),[[3,'middle'],[2,'early'],[1,'late'],[4,'undated']]);
+ d.querySelector('[data-action="delete"][data-id="early"]').click();
+ await d.getElementById('confirmDelete').onclick();
+ assert.deepEqual(numberedRows(),[[2,'middle'],[1,'late'],[3,'undated']]);
+
+ records.push({id:'same-day',cells:{C6:'2026-03-21'}});
+ records.reverse();
+ w.dispatchEvent(new w.Event('bamco:central-ready'));await tick();
+ assert.deepEqual(numberedRows(),[[3,'late'],[2,'same-day'],[1,'early'],[4,'undated']]);
+});
