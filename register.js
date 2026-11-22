@@ -135,7 +135,14 @@
   const sources=$('vehiclePresetSources'),labels=Object.fromEntries(GROUPS.flatMap(([,fields])=>fields.map(([path,label])=>[path,label])));sources.hidden=!copied.length;
   sources.querySelector('div').innerHTML='<table><thead><tr><th>Field</th><th>Copied value</th><th>Source test · date</th></tr></thead><tbody>'+copied.map(key=>'<tr><td>'+esc(labels['cells.'+key]||key)+'</td><td>'+esc(preset.cells[key])+'</td><td>'+esc(preset.sources[key].id)+' · '+esc(preset.sources[key].date)+'</td></tr>').join('')+'</tbody></table>';
  }
- function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();autoFilled={};if(draft?.cells){const mass=runningMass(draft);if(mass>0)draft.cells.C110=mass;}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');$('dialogBody').focus({preventScroll:true});}
+ function focusFormStart(){
+  const body=$('dialogBody');
+  body.scrollTop=0;
+  const first=body.querySelector('input[data-key]:enabled:not([readonly])');
+  (first||body).focus();
+  if(first?.type==='text')first.setSelectionRange(first.value.length,first.value.length);
+ }
+ function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();autoFilled={};if(draft?.cells){const mass=runningMass(draft);if(mass>0)draft.cells.C110=mass;}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('testDialog').showModal();document.body.classList.add('dialog-open');focusFormStart();}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
  function collect(){document.querySelectorAll('#dialogBody [data-key]').forEach(collectOne);if(draft?.cells){draft.id=draft.cells.C5||draft.id;draft.date=solarDate(draft.cells.C6||'');draft.cells.C6=draft.date;draft.model=draft.cells.C15||'';const mass=runningMass(draft);draft.cells.C90=mass>0?mass:'';draft.cells.C111=massRatio(draft)}}
  function refreshCalculations(){document.querySelectorAll('[data-calculated]').forEach(el=>{const [kind,p]=el.dataset.calculated.split('.');el.textContent=display(el.dataset.calculated==='cells.C111'?massRatio(draft):kind==='raw'?draft.results?.[p]?.combined:corrected(draft,p));})}
@@ -186,7 +193,7 @@
  $('closeDialog').onclick=close;$('cancelDialog').onclick=close;
  $('testDialog').addEventListener('cancel',event=>{event.preventDefault();close()});
  $('keepEditing').onclick=()=>$('discardDialog').close();$('discardChanges').onclick=finishClose;
- $('editRecord').onclick=()=>{mode='edit';renderDialog();collect();cleanDraft=clone(draft);$('dialogBody').scrollTop=0};
+ $('editRecord').onclick=()=>{mode='edit';renderDialog();collect();cleanDraft=clone(draft);focusFormStart()};
  $('testForm').onsubmit=save;$('confirmDelete').onclick=remove;
  $('dialogBody').addEventListener('input',event=>{if(event.target.dataset.key){collectOne(event.target);refreshCalculations()}});
  $('dialogBody').addEventListener('change',event=>{

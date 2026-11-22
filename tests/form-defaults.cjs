@@ -62,6 +62,9 @@ test('vertical arrows move through editable record fields and preserve entered v
  const scrolls = [];
  Object.defineProperties(body, {scrollHeight:{value:3000}, clientHeight:{value:600}});
  body.scrollBy = options => scrolls.push(options.top);
+ assert.equal(d.activeElement, field('C6'));
+ press('ArrowDown');
+ assert.equal(d.activeElement, field('C7'));
  picker.focus();
  assert.equal(press('ArrowUp'), true);
  assert.equal(d.activeElement, picker);
@@ -79,6 +82,12 @@ test('vertical arrows move through editable record fields and preserve entered v
  assert.equal(d.activeElement, field('C14'));
  press('ArrowUp');
  assert.equal(d.activeElement, field('C11'));
+ field('C8').focus();
+ press('Unidentified', {code:'ArrowDown'});
+ press('ArrowUp');
+ assert.equal(d.activeElement, field('C8'));
+ assert.equal(d.activeElement.selectionStart, 'Tehran'.length);
+ assert.equal(d.activeElement.selectionEnd, 'Tehran'.length);
  field('C110').focus();
  press('ArrowDown');
  assert.equal(d.activeElement, field('C114')); // The calculated ratio has no editor.
@@ -90,11 +99,25 @@ test('vertical arrows move through editable record fields and preserve entered v
  press('PageDown');
  body.focus();
  press('ArrowUp');
- assert.deepEqual(scrolls, [480, -64]);
+ assert.equal(d.activeElement, field('C153'));
+ assert.deepEqual(scrolls, [480]);
 
  d.getElementById('cancelDialog').click();
+ d.querySelector('[data-action="open"]').click();
+ assert.equal(d.activeElement, body);
+ press('ArrowDown');
+ assert.deepEqual(scrolls, [480, 64]);
+ const edit = d.getElementById('editRecord');
+ edit.focus();
+ edit.click();
+ assert.equal(d.activeElement, field('C6'));
+ press('ArrowDown');
+ assert.equal(d.activeElement, field('C7'));
+ d.getElementById('cancelDialog').click();
  d.getElementById('createTest').click();
- field('C6').focus();
+ assert.equal(d.activeElement, field('C5'));
+ press('ArrowDown');
+ assert.equal(d.activeElement, field('C6'));
  press('ArrowUp');
  assert.equal(d.activeElement, field('C5')); // Test ID is editable on creation.
 });
