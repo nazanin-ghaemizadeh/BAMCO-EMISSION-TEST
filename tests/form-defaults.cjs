@@ -99,7 +99,16 @@ test('vertical arrows move through editable record fields and preserve entered v
  press('PageDown');
  body.focus();
  press('ArrowUp');
- assert.equal(d.activeElement, field('C153'));
+ assert.equal(d.activeElement, field('C7'));
+ d.getElementById('saveRecord').focus();
+ press('ArrowDown');
+ assert.equal(d.activeElement, field('C8'));
+ field('C10').closest('td').click();
+ assert.equal(d.activeElement, field('C10'));
+ // A child listener cannot turn a caret movement back into a page scroll.
+ field('C10').addEventListener('keydown', event => event.stopPropagation(), {once:true});
+ assert.equal(press('ArrowDown'), true);
+ assert.equal(d.activeElement, field('C11'));
  assert.deepEqual(scrolls, [480]);
 
  d.getElementById('cancelDialog').click();
