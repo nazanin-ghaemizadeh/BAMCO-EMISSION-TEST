@@ -10,10 +10,10 @@ async function setup(records){
 test('vehicle selection fills shared fields, offers labs and leaves test identity and results untouched',async t=>{
  const dom=await setup([{id:'old-a',cells:{C15:'Vehicle A',C14:'Example manufacturer',C66:'0.745',C9:'ISQI Vehicle Emission Test & Research Center',C17:'DO-NOT-COPY',E99:'123'}},{id:'old-b',cells:{C15:'Vehicle A',C14:'Example manufacturer',C66:'0.745',C9:'AIRIC Emission Lab EURO V'}}]);t.after(()=>dom.window.close());const w=dom.window,d=w.document;
  d.getElementById('createTest').click();const field=key=>d.querySelector('[data-key="cells.'+key+'"]');const id=field('C5').value;
- const picker=d.getElementById('vehiclePreset');picker.value='Vehicle A';picker.dispatchEvent(new w.Event('change',{bubbles:true}));
+ const picker=d.getElementById('vehiclePreset');picker.focus();picker.value='Vehicle A';picker.dispatchEvent(new w.Event('change',{bubbles:true}));
  assert.equal(field('C15').value,'Vehicle A');assert.equal(field('C14').value,'Example manufacturer');assert.equal(field('C66').value,'0.745');assert.equal(field('C17').value,'');assert.equal(field('E99').value,'');assert.equal(field('C5').value,id);
  assert.equal(field('C9').tagName,'SELECT');assert.deepEqual([...field('C9').options].map(o=>o.value),['','Iran Standard & Quality Inspection Co. (ISQI)','AIRIC Emission Lab EURO V']);
- assert.equal(d.activeElement,d.getElementById('dialogBody'));
+ assert.equal(d.activeElement,picker);
  assert.match(d.getElementById('vehiclePresetSources').textContent,/old-a/);
  field('C14').value='My manual change';picker.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(field('C14').value,'My manual change');
  w.dispatchEvent(new w.CustomEvent('bamco:central-reconnecting',{detail:{message:'Reconnecting'}}));assert.equal(d.getElementById('testDialog').open,true);assert.equal(field('C14').value,'My manual change');
@@ -39,21 +39,64 @@ test('switching vehicles replaces previous defaults without carrying VIN or over
  assert.equal(d.querySelector('[data-key="cells.C14"]').value,'Maker B');assert.equal(d.querySelector('[data-key="cells.C27"]').value,'');
  assert.equal(d.querySelector('[data-key="cells.C110"]').value,'');
 });
-test('both stored ISQI names select the same option; laboratory selection returns focus to the form',async t=>{
+test('both stored ISQI names select the same option; laboratory selection keeps focus on the field',async t=>{
  const dom=await setup([{id:'legacy',cells:{C15:'Vehicle A',C9:'ISQI Vehicle Emission Test & Research Center'}}]);t.after(()=>dom.window.close());const w=dom.window,d=w.document;
  d.querySelector('[data-action="edit"]').click();const lab=d.querySelector('[data-key="cells.C9"]');
  assert.equal(lab.options.length,3);assert.equal(lab.value,'Iran Standard & Quality Inspection Co. (ISQI)');
  lab.focus();lab.value='AIRIC Emission Lab EURO V';lab.dispatchEvent(new w.Event('change',{bubbles:true}));
- assert.equal(d.activeElement,d.getElementById('dialogBody'));assert.match(lab.selectedOptions[0].textContent,/SAIPA/);
+ assert.equal(d.activeElement,lab);assert.match(lab.selectedOptions[0].textContent,/SAIPA/);
 });
-test('arrow keys scroll from single-line fields without changing values, while multiline and dropdown controls keep native navigation',async t=>{
- const dom=await setup([]);t.after(()=>dom.window.close());const w=dom.window,d=w.document;d.getElementById('createTest').click();const body=d.getElementById('dialogBody'),calls=[];
- Object.defineProperties(body,{scrollHeight:{value:3000},clientHeight:{value:600}});body.scrollBy=options=>calls.push(options.top);
- const down=new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true});d.getElementById('dialogTitle').dispatchEvent(down);assert.equal(down.defaultPrevented,true);assert.deepEqual(calls,[64]);
- const field=d.querySelector('[data-key="cells.C5"]'),value=field.value;field.focus();field.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}));assert.deepEqual(calls,[64,64]);assert.equal(field.value,value);
- for(const control of [d.getElementById('vehiclePreset'),d.querySelector('textarea')])control.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}));assert.deepEqual(calls,[64,64]);
- field.dispatchEvent(new w.KeyboardEvent('keydown',{key:'PageDown',bubbles:true,cancelable:true}));assert.deepEqual(calls,[64,64,480]);
- field.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true,cancelable:true}));assert.deepEqual(calls,[64,64,480,-64]);
+test('vertical arrows move through editable record fields and preserve entered values', async t => {
+ const dom = await setup([{id:'existing', cells:{C8:'Tehran'}}]);
+ t.after(() => dom.window.close());
+ const {window:w} = dom, d = w.document;
+ const field = key => d.querySelector('[data-key="cells.' + key + '"]');
+ function press(key, modifiers = {}) {
+  const event = new w.KeyboardEvent('keydown', {key, bubbles:true, cancelable:true, ...modifiers});
+  d.activeElement.dispatchEvent(event);
+  return event.defaultPrevented;
+ }
+
+ d.querySelector('[data-action="edit"]').click();
+ const body = d.getElementById('dialogBody'), picker = d.getElementById('vehiclePreset');
+ const scrolls = [];
+ Object.defineProperties(body, {scrollHeight:{value:3000}, clientHeight:{value:600}});
+ body.scrollBy = options => scrolls.push(options.top);
+ picker.focus();
+ assert.equal(press('ArrowUp'), true);
+ assert.equal(d.activeElement, picker);
+ press('ArrowDown');
+ assert.equal(d.activeElement, field('C6')); // Test ID is read-only when editing.
+ field('C8').focus();
+ const labValue = field('C9').value;
+ for (const key of ['C9', 'C10', 'C11', 'C14']) {
+  press('ArrowDown');
+  assert.equal(d.activeElement, field(key));
+ }
+ assert.equal(field('C8').value, 'Tehran');
+ assert.equal(field('C9').value, labValue);
+ assert.equal(press('ArrowUp', {shiftKey:true}), false);
+ assert.equal(d.activeElement, field('C14'));
+ press('ArrowUp');
+ assert.equal(d.activeElement, field('C11'));
+ field('C110').focus();
+ press('ArrowDown');
+ assert.equal(d.activeElement, field('C114')); // The calculated ratio has no editor.
+ field('C153').focus();
+ press('ArrowDown');
+ assert.equal(d.activeElement, field('C153'));
+ assert.deepEqual(scrolls, []);
+ field('C8').focus();
+ press('PageDown');
+ body.focus();
+ press('ArrowUp');
+ assert.deepEqual(scrolls, [480, -64]);
+
+ d.getElementById('cancelDialog').click();
+ d.getElementById('createTest').click();
+ field('C6').focus();
+ press('ArrowUp');
+ assert.equal(d.activeElement, field('C5')); // Test ID is editable on creation.
 });
 test('register numbers follow the test date after import, edit, deletion and refresh',async t=>{
  const records=[

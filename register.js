@@ -134,7 +134,6 @@
   refreshCalculations();$('vehiclePresetNotice').textContent=copied.length+' fields filled from previous '+preset.model+' tests. Your existing entries were kept. All copied values can be edited.';
   const sources=$('vehiclePresetSources'),labels=Object.fromEntries(GROUPS.flatMap(([,fields])=>fields.map(([path,label])=>[path,label])));sources.hidden=!copied.length;
   sources.querySelector('div').innerHTML='<table><thead><tr><th>Field</th><th>Copied value</th><th>Source test · date</th></tr></thead><tbody>'+copied.map(key=>'<tr><td>'+esc(labels['cells.'+key]||key)+'</td><td>'+esc(preset.cells[key])+'</td><td>'+esc(preset.sources[key].id)+' · '+esc(preset.sources[key].date)+'</td></tr>').join('')+'</tbody></table>';
-  $('dialogBody').focus({preventScroll:true});
  }
  function open(modeName,id,trigger){if(!connected&&modeName!=='create')return; const selected=id?rows.find(r=>r.id===id):null;if(id&&!selected)return;mode=modeName;original=selected?clone(selected):null;draft=selected?clone(selected):newTest();autoFilled={};if(draft?.cells){const mass=runningMass(draft);if(mass>0)draft.cells.C110=mass;}pendingFiles=[];lastTrigger=trigger||document.activeElement;renderDialog();if(['edit','create'].includes(mode)){collect();cleanDraft=clone(draft)}else cleanDraft=null;$('dialogBody').scrollTop=0;$('testDialog').showModal();document.body.classList.add('dialog-open');$('dialogBody').focus({preventScroll:true});}
  function collectOne(el){const key=el.dataset.key;if(!key||el.readOnly)return;const value=el.type==='number'?(el.value===''?(key.startsWith('results.')||key.startsWith('limits.')?null:''):Number(el.value)):el.value;setPath(draft,key,value)}
@@ -192,7 +191,7 @@
  $('dialogBody').addEventListener('input',event=>{if(event.target.dataset.key){collectOne(event.target);refreshCalculations()}});
  $('dialogBody').addEventListener('change',event=>{
   if(event.target.id==='vehiclePreset'){applyVehicle(event.target.value);return;}
-  const input=event.target;if(input.dataset.key==='cells.C9')$('dialogBody').focus({preventScroll:true});if(input.dataset.key){collectOne(input);if(input.dataset.key==='cyclePhaseCount'||input.dataset.key==='cycle'){collect();const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}else refreshCalculations()}
+  const input=event.target;if(input.dataset.key){collectOne(input);if(input.dataset.key==='cyclePhaseCount'||input.dataset.key==='cycle'){collect();const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}else refreshCalculations()}
   if(input.id==='recordAttachments'){const files=[...input.files];if(files.some(file=>file.size>52428800)){notice('Each attachment must be no larger than 50 MB.',true);input.value='';return}collect();pendingFiles.push(...files.map(file=>({id:uuid(),file})));const top=$('dialogBody').scrollTop;renderDialog();$('dialogBody').scrollTop=top}
  });
  $('dialogBody').addEventListener('click',event=>{const button=event.target.closest('[data-download]');if(button)downloadFile(button.dataset.download)});
